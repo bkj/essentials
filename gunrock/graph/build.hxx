@@ -91,8 +91,9 @@ auto from_csr_t(typename vertex_vector_t::value_type const& r,
                 edge_vector_t& Ap,
                 vertex_vector_t& Aj,
                 weight_vector_t& Ax) {
+
   using vertex_type = typename vertex_vector_t::value_type;
-  using edge_type = typename edge_vector_t::value_type;
+  using edge_type   = typename edge_vector_t::value_type;
   using weight_type = typename weight_vector_t::value_type;
 
   auto Ap_ptr = memory::raw_pointer_cast(Ap.data());
