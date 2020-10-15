@@ -50,6 +50,7 @@ struct enactor_t {
   frontier_type* active_frontier;
   frontier_type* inactive_frontier;
   int buffer_selector;
+  int iteration;
 
   // Disable copy ctor and assignment operator.
   // We don't want to let the user copy only a slice.
@@ -63,7 +64,8 @@ struct enactor_t {
         frontiers(number_of_buffers),
         active_frontier(&frontiers[0]),
         inactive_frontier(&frontiers[1]),
-        buffer_selector(0) {
+        buffer_selector(0),
+        iteration(0) {
     // Set temporary buffer to be at least the number of edges
     auto g = problem->get_host_graph_pointer();
     auto buffer = get_inactive_frontier_buffer();
@@ -108,6 +110,7 @@ struct enactor_t {
     timer.begin();
     while (!is_converged(single_context)) {
       loop(single_context);
+      iteration++;
     }
     return timer.end();
   }
