@@ -1,10 +1,10 @@
 #include <cstdlib>  // EXIT_SUCCESS
 
-#include <gunrock/applications/sssp/sssp_implementation.hxx>
+#include <examples/sssp/sssp_implementation.hxx>
 
 using namespace gunrock;
 
-void test_sssp() {
+void run_app() {
   using vertex_t = int;
   using edge_t   = int;
   using weight_t = float;
@@ -103,6 +103,6 @@ void test_sssp() {
 }
 
 int main(int argc, char** argv) {
-  test_sssp();
+  run_app();
   return EXIT_SUCCESS;
 }
