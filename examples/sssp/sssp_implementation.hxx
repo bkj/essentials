@@ -84,12 +84,7 @@ struct sssp_enactor_t : enactor_t<algorithm_problem_t> {
     auto remove_completed_paths = [] __host__ __device__(
       vertex_t const& vertex
     ) -> bool {
-          
       return vertex != std::numeric_limits<vertex_t>::max();
-      
-      // !! I think this is still wrong... I think it's supposed to be 
-      //   distances[vertex] != std::numeric_limits<weight_t>::max()
-      // but I'm still a little unclear on what this filter does anyway .. 
     };
   
     // --
