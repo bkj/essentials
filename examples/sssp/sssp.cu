@@ -1,49 +1,82 @@
 #include <cstdlib>  // EXIT_SUCCESS
 
-#include <gunrock/applications/sssp/sssp.hxx>
+#include <gunrock/applications/runner.hxx>
+#include <gunrock/applications/sssp/sssp_implementation.hxx>
 
 using namespace gunrock;
 
 void test_sssp(int num_arguments, char** argument_array) {
-  using vertex_t = int;
-  using edge_t = int;
-  using weight_t = float;
-
+  
   if (num_arguments != 2) {
-    std::cerr << "usage: ./bin/color filename.mtx" << std::endl;
+    std::cerr << "usage: ./bin/<program-name> filename.mtx" << std::endl;
     exit(1);
   }
+  
+  // --
+  // Define types
+  
+  using vertex_t = int;
+  using edge_t   = int;
+  using weight_t = float;
+  
+  constexpr memory::memory_space_t h_space = memory::memory_space_t::host;
+  constexpr memory::memory_space_t d_space = memory::memory_space_t::device;
+  
+  using h_graph_t = graph::graph_t<
+      h_space, vertex_t, edge_t, weight_t,
+      graph::graph_csr_t<h_space, vertex_t, edge_t, weight_t>>;
+  
+  using d_graph_t = graph::graph_t<
+      d_space, vertex_t, edge_t, weight_t,
+      graph::graph_csr_t<d_space, vertex_t, edge_t, weight_t>>;
 
-  // Load Matrix-Market file & convert the resultant COO into CSR format.
+  using param_t   = sssp::sssp_param_t<d_graph_t, h_graph_t>;
+  using result_t  = sssp::sssp_result_t<d_graph_t, h_graph_t>;
+  using problem_t = sssp::sssp_problem_t<d_graph_t, h_graph_t>;
+  using enactor_t = sssp::sssp_enactor_t<problem_t>;
+  
+  // --
+  // IO
+  
   std::string filename = argument_array[1];
+  
   io::matrix_market_t<vertex_t, edge_t, weight_t> mm;
   auto coo = mm.load(filename);
-  format::csr_t<memory::memory_space_t::host, vertex_t, edge_t, weight_t> h_csr;
+  
+  format::csr_t<h_space, vertex_t, edge_t, weight_t> h_csr;
+  format::csr_t<d_space, vertex_t, edge_t, weight_t> d_csr;
+  
   h_csr = coo;
-
-  // Move data to device.
-  format::csr_t<memory::memory_space_t::device, vertex_t, edge_t, weight_t>
-      d_csr;
-
-  d_csr.number_of_rows = h_csr.number_of_rows;
-  d_csr.number_of_columns = h_csr.number_of_columns;
+  
+  // !! Helper function for copying `h_csr` to `d_car`?
+  d_csr.number_of_rows     = h_csr.number_of_rows;     // !! IMO change to `n_rows`, `num_rows`
+  d_csr.number_of_columns  = h_csr.number_of_columns;
   d_csr.number_of_nonzeros = h_csr.number_of_nonzeros;
-  d_csr.row_offsets = h_csr.row_offsets;
-  d_csr.column_indices = h_csr.column_indices;
-  d_csr.nonzero_values = h_csr.nonzero_values;
+  d_csr.row_offsets        = h_csr.row_offsets;        // !! IMO change to `offsets`, `indices` and `values`
+  d_csr.column_indices     = h_csr.column_indices;
+  d_csr.nonzero_values     = h_csr.nonzero_values;
 
-  vertex_t source = 0;
-  thrust::device_vector<weight_t> d_distances(h_csr.number_of_rows);
+  // --
+  // Run
+  
+  vertex_t single_source = 0;
+  param_t param(single_source);
+  
+  result_t result(h_csr.number_of_rows);
 
-  // calling sssp
-  float elapsed = sssp::execute(h_csr, d_csr,
-                                source,      // single source
-                                d_distances  // output distances
+  float elapsed = csr_run<problem_t, enactor_t, param_t, result_t>(
+    h_csr,
+    d_csr,
+    param,
+    result
   );
 
+  // --
+  // Log
+  
   std::cout << "Distances (output) = ";
-  thrust::copy(d_distances.begin(), d_distances.end(),
-               std::ostream_iterator<weight_t>(std::cout, " "));
+  thrust::copy(result.distances.begin(), result.distances.end(),
+               std::ostream_iterator<weight_t>(std::cout, " ")); // !! Helper function for printing vectors?
   std::cout << std::endl;
 
   std::cout << "SSSP Elapsed Time: " << elapsed << " (ms)" << std::endl;
