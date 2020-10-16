@@ -22,19 +22,6 @@ void test_sssp(int num_arguments, char** argument_array) {
   constexpr memory::memory_space_t h_space = memory::memory_space_t::host;
   constexpr memory::memory_space_t d_space = memory::memory_space_t::device;
   
-  using h_graph_t = graph::graph_t<
-      h_space, vertex_t, edge_t, weight_t,
-      graph::graph_csr_t<h_space, vertex_t, edge_t, weight_t>>;
-  
-  using d_graph_t = graph::graph_t<
-      d_space, vertex_t, edge_t, weight_t,
-      graph::graph_csr_t<d_space, vertex_t, edge_t, weight_t>>;
-
-  using param_t   = sssp::sssp_param_t<d_graph_t, h_graph_t>;
-  using result_t  = sssp::sssp_result_t<d_graph_t, h_graph_t>;
-  using problem_t = sssp::sssp_problem_t<d_graph_t, h_graph_t>;
-  using enactor_t = sssp::sssp_enactor_t<problem_t>;
-  
   // --
   // IO
   
@@ -59,6 +46,20 @@ void test_sssp(int num_arguments, char** argument_array) {
   // --
   // Run
   
+  using h_graph_t = graph::graph_t<
+      h_space, vertex_t, edge_t, weight_t,
+      graph::graph_csr_t<h_space, vertex_t, edge_t, weight_t>>;
+  
+  using d_graph_t = graph::graph_t<
+      d_space, vertex_t, edge_t, weight_t,
+      graph::graph_csr_t<d_space, vertex_t, edge_t, weight_t>>;
+
+  // ========================= Nothing above this line has to change =========================
+  using param_t   = sssp::sssp_param_t<d_graph_t, h_graph_t>;
+  using result_t  = sssp::sssp_result_t<d_graph_t, h_graph_t>;
+  using problem_t = sssp::sssp_problem_t<d_graph_t, h_graph_t>;
+  using enactor_t = sssp::sssp_enactor_t<problem_t>;
+  
   vertex_t single_source = 0;
   param_t param(single_source);
   
@@ -78,7 +79,6 @@ void test_sssp(int num_arguments, char** argument_array) {
   thrust::copy(result.distances.begin(), result.distances.end(),
                std::ostream_iterator<weight_t>(std::cout, " ")); // !! Helper function for printing vectors?
   std::cout << std::endl;
-
   std::cout << "SSSP Elapsed Time: " << elapsed << " (ms)" << std::endl;
 }
 
