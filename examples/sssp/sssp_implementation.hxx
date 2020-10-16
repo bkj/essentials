@@ -27,21 +27,22 @@ struct sssp_problem_t : problem_t<graph_type, host_graph_type> {
   thrust::device_vector<weight_t> distances_vec;
   weight_t* distances;
 
-  sssp_problem_t(graph_type* G,
-                 host_graph_type* g,
-                 std::shared_ptr<cuda::multi_context_t> context,
-                 vertex_t& single_source_)
-      : problem_t<graph_type, host_graph_type>(G, g, context) {
+  sssp_problem_t(
+    graph_type* G,
+    host_graph_type* g,
+    std::shared_ptr<cuda::multi_context_t> context,
+    vertex_t& single_source_
+  ) : problem_t<graph_type, host_graph_type>(G, g, context) {
           
-          // Store source
-          single_source = single_source_;
-          
-          // Allocate + init distances
-          distances_vec.resize(g->get_number_of_vertices());
-          thrust::fill(thrust::device, distances_vec.begin(), distances_vec.end(), std::numeric_limits<weight_t>::max());
-          thrust::fill(thrust::device, distances_vec.begin() + single_source, distances_vec.begin() + single_source + 1, 0);
-          distances = distances_vec.data().get();
-        }
+    // Store source
+    single_source = single_source_;
+
+    // Allocate + init distances
+    distances_vec.resize(g->get_number_of_vertices());
+    thrust::fill(thrust::device, distances_vec.begin(), distances_vec.end(), std::numeric_limits<weight_t>::max());
+    thrust::fill(thrust::device, distances_vec.begin() + single_source, distances_vec.begin() + single_source + 1, 0);
+    distances = distances_vec.data().get();
+  }
 
   sssp_problem_t(const sssp_problem_t& rhs) = delete;            // Boilerplate -- can remove?
   sssp_problem_t& operator=(const sssp_problem_t& rhs) = delete; // Boilerplate -- can remove?
@@ -99,9 +100,10 @@ struct sssp_enactor_t : enactor_t<algorithm_problem_t> {
         G, E, remove_completed_paths);
   }
 
-  sssp_enactor_t(algorithm_problem_t* problem,
-                 std::shared_ptr<cuda::multi_context_t> context)
-      : enactor_type(problem, context) {} // Boilerplate -- can remove?
+  sssp_enactor_t(
+    algorithm_problem_t* problem,
+    std::shared_ptr<cuda::multi_context_t> context
+  ) : enactor_type(problem, context) {} // Boilerplate -- can remove?
 
   sssp_enactor_t(const sssp_enactor_t& rhs) = delete;             // Boilerplate -- can remove?
   sssp_enactor_t& operator=(const sssp_enactor_t& rhs) = delete;  // Boilerplate -- can remove?
