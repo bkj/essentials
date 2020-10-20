@@ -128,29 +128,8 @@ auto from_csr_t(csr_t* csr) {
       csr->nonzero_values);  
 }
 
-// template <typename vertex_t, typename edge_t>
-// auto meta_graph(vertex_t const& r, vertex_t const& c, edge_t const& nnz) {
-//   using vertex_type = vertex_t;
-//   using edge_type   = edge_t;
-//   using weight_type = edge_t;
-
-//   constexpr memory_space_t space = memory_space_t::host;
-
-//   using graph_type = graph::graph_t<
-//       space, vertex_type, edge_type, weight_type,
-//       graph::graph_csr_t<space, vertex_type, edge_type, weight_type>>;
-
-//   typename vector<graph_type, space>::type O(1);
-//   graph_type G;
-
-//   G.set(r, c, nnz, nullptr, nullptr, nullptr);
-//   host::csr_t<graph_type>(G, memory::raw_pointer_cast(O.data()));
-
-//   return O;
-// }
-
 template <typename csr_t>
-auto meta_graph(csr_t* csr) {
+auto meta_from_csr_t(csr_t* csr) {
   using vertex_type = typename decltype(csr->row_offsets)::value_type;
   using edge_type   = typename decltype(csr->column_indices)::value_type;
   using weight_type = typename decltype(csr->nonzero_values)::value_type;
