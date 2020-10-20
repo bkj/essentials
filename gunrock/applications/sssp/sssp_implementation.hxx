@@ -17,50 +17,88 @@
 namespace gunrock {
 namespace sssp {
 
-template <typename graph_type, typename host_graph_type>
-struct sssp_problem_t : problem_t<graph_type, host_graph_type> {
-  // Get useful types from graph_type
-  using vertex_t = typename graph_type::vertex_type;
-  using weight_t = typename graph_type::weight_type;
+template <typename d_graph_t>
+struct sssp_param_t {
+   using vertex_t = typename d_graph_t::vertex_type;
+   
+   vertex_t single_source;
+   
+   sssp_param_t(
+     vertex_t single_source_
+   ) {
+     single_source = single_source_;
+   }
+};
 
-  using weight_pointer_t = typename graph_type::weight_pointer_t;
-  using vertex_pointer_t = typename graph_type::vertex_pointer_t;
+template <typename d_graph_t>
+struct sssp_result_t {
+  using vertex_t = typename d_graph_t::vertex_type;
+  using weight_t = typename d_graph_t::weight_type;
+   
+  thrust::device_vector<weight_t> distances;
+  thrust::device_vector<vertex_t> predecessors;
+  thrust::device_vector<vertex_t> visited;
+   
+  sssp_result_t(
+    vertex_t n_nodes
+  ) {
+     distances.resize(n_nodes);
+     predecessors.resize(n_nodes);
+     visited.resize(n_nodes);
+     thrust::fill(thrust::device, visited.begin(), visited.end(), -1);
+  }
+};
+
+
+template <
+  typename d_graph_t, 
+  typename meta_t = graph::graph_t<
+    memory::memory_space_t::host, typename d_graph_t::vertex_type, typename d_graph_t::edge_type, typename d_graph_t::edge_type,
+    graph::graph_csr_t<
+      memory::memory_space_t::host, typename d_graph_t::vertex_type, typename d_graph_t::edge_type, typename d_graph_t::edge_type
+    >
+  >
+>
+struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
+  
+  using param_t  = sssp_param_t<d_graph_t>;
+  using result_t = sssp_result_t<d_graph_t>;
+
+  using vertex_t = typename d_graph_t::vertex_type;
+  using weight_t = typename d_graph_t::weight_type;
+
+  using weight_pointer_t = typename d_graph_t::weight_pointer_t;
+  using vertex_pointer_t = typename d_graph_t::vertex_pointer_t; // Why do we have a special type for this? Why not `vertex_t*`?
 
   // Useful types from problem_t
-  using problem_type = problem_t<graph_type, host_graph_type>;
+  using problem_t = problem_t<d_graph_t, meta_t>;
 
   vertex_t single_source;
   weight_pointer_t distances;
   vertex_pointer_t predecessors;
-  thrust::device_vector<vertex_t> visited;
+  vertex_pointer_t visited;
+  result_t result;
 
-  /**
-   * @brief Construct a new sssp problem t object
-   *
-   * @param G graph on GPU
-   * @param g graph on CPU
-   * @param context system context
-   * @param source input single source for sssp
-   * @param dist output distance pointer
-   * @param preds output predecessors pointer
-   */
-  sssp_problem_t(graph_type* G,
-                 host_graph_type* g,
+  sssp_problem_t(d_graph_t* d_G,
+                 meta_t* meta,
                  std::shared_ptr<cuda::multi_context_t> context,
-                 vertex_t& source,
-                 weight_pointer_t dist,
-                 vertex_pointer_t preds)
-      : problem_type(G, g, context),
-        single_source(source),
-        distances(dist),
-        predecessors(preds),
-        visited(g[0].get_number_of_vertices(), -1) {
-    // Set all initial distances to INFINITY
-    auto d_dist = thrust::device_pointer_cast(distances);
-    thrust::fill(thrust::device, d_dist + 0,
-                 d_dist + g[0].get_number_of_vertices(),
-                 std::numeric_limits<weight_t>::max());
-    thrust::fill(thrust::device, d_dist + source, d_dist + source + 1, 0);
+                 param_t& param,
+                 result_t& result)
+      : problem_t(d_G, meta, context) {
+    
+    single_source = param.single_source;
+    distances     = result.distances.data().get();
+    predecessors  = result.predecessors.data().get();
+    visited       = result.visited.data().get();
+    
+    auto d_distances = thrust::device_pointer_cast(distances);
+    thrust::fill(
+      thrust::device,
+      d_distances + 0,
+      d_distances + meta[0].get_number_of_vertices(),
+      std::numeric_limits<weight_t>::max()
+    );
+    thrust::fill(thrust::device, d_distances + single_source, d_distances + single_source + 1, 0);
   }
 
   sssp_problem_t(const sssp_problem_t& rhs) = delete;
@@ -69,10 +107,10 @@ struct sssp_problem_t : problem_t<graph_type, host_graph_type> {
 
 template <typename algorithm_problem_t>
 struct sssp_enactor_t : enactor_t<algorithm_problem_t> {
-  using enactor_type = enactor_t<algorithm_problem_t>;
+  using enactor_t = enactor_t<algorithm_problem_t>;
 
   using vertex_t = typename algorithm_problem_t::vertex_t;
-  using edge_t = typename algorithm_problem_t::edge_t;
+  using edge_t   = typename algorithm_problem_t::edge_t;
   using weight_t = typename algorithm_problem_t::weight_t;
 
   /**
@@ -82,11 +120,9 @@ struct sssp_enactor_t : enactor_t<algorithm_problem_t> {
    * @param context
    */
   void prepare_frontier(cuda::standard_context_t* context) override {
-    auto P = enactor_type::get_problem_pointer();
-    auto single_source = P->single_source;
-
-    auto f = enactor_type::get_active_frontier_buffer();
-    f->push_back(single_source);
+    auto P = enactor_t::get_problem_pointer();
+    auto f = enactor_t::get_active_frontier_buffer();
+    f->push_back(P->single_source);
   }
 
   /**
@@ -101,12 +137,14 @@ struct sssp_enactor_t : enactor_t<algorithm_problem_t> {
    */
   void loop(cuda::standard_context_t* context) override {
     // Data slice
-    auto P = enactor_type::get_problem_pointer();
+    auto P = enactor_t::get_problem_pointer();
     auto G = P->get_graph_pointer();
-    auto distances = P->distances;
+    
+    auto distances     = P->distances;
     auto single_source = P->single_source;
-    auto visited = P->visited.data().get();
-    auto iteration = enactor_type::iteration;
+    auto visited       = P->visited;
+    
+    auto iteration = enactor_t::iteration;
 
     /**
      * @brief Lambda operator to advance to neighboring vertices from the
@@ -117,11 +155,11 @@ struct sssp_enactor_t : enactor_t<algorithm_problem_t> {
      *
      */
     auto shortest_path = [distances, single_source] __host__ __device__(
-                             vertex_t const& source,    // ... source
-                             vertex_t const& neighbor,  // neighbor
-                             edge_t const& edge,        // edge
-                             weight_t const& weight     // weight (tuple).
-                             ) -> bool {
+      vertex_t const& source,    // ... source
+      vertex_t const& neighbor,  // neighbor
+      edge_t const& edge,        // edge
+      weight_t const& weight     // weight (tuple).
+    ) -> bool {
       weight_t source_distance = distances[source];  // use cached::load
       weight_t distance_to_neighbor = source_distance + weight;
 
@@ -129,9 +167,7 @@ struct sssp_enactor_t : enactor_t<algorithm_problem_t> {
       weight_t recover_distance =
           math::atomic::min(&(distances[neighbor]), distance_to_neighbor);
 
-      if (distance_to_neighbor < recover_distance)
-        return true;  // mark to keep
-      return false;   // mark for removal
+      return (distance_to_neighbor < recover_distance);
     };
 
     /**
@@ -151,19 +187,19 @@ struct sssp_enactor_t : enactor_t<algorithm_problem_t> {
 
     // Execute advance operator on the provided lambda
     operators::advance::execute<operators::advance_type_t::vertex_to_vertex>(
-        G, enactor_type::get_enactor(), shortest_path);
+        G, enactor_t::get_enactor(), shortest_path);
 
     // Execute filter operator on the provided lambda
     operators::filter::execute<operators::filter_type_t::predicated>(
-        G, enactor_type::get_enactor(), remove_completed_paths);
+        G, enactor_t::get_enactor(), remove_completed_paths);
   }
 
   sssp_enactor_t(algorithm_problem_t* _problem,
                  std::shared_ptr<cuda::multi_context_t> _context)
-      : enactor_type(_problem, _context) {}
+      : enactor_t(_problem, _context) {}
 
-  sssp_enactor_t(const sssp_enactor_t& rhs) = delete;
-  sssp_enactor_t& operator=(const sssp_enactor_t& rhs) = delete;
+  sssp_enactor_t(const sssp_enactor_t& rhs) = delete;            // Boilerplate? Can remove?
+  sssp_enactor_t& operator=(const sssp_enactor_t& rhs) = delete; // Boilerplate? Can remove?
 };  // struct sssp_enactor_t
 
 }  // namespace sssp
