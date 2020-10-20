@@ -43,7 +43,9 @@ struct sssp_result_t {
     meta_t* meta
   ) {
      distances.resize(meta->get_number_of_vertices());
+     
      predecessors.resize(meta->get_number_of_vertices());
+     
      visited.resize(meta->get_number_of_vertices());
      thrust::fill(thrust::device, visited.begin(), visited.end(), -1);
   }

@@ -33,7 +33,7 @@ void test_sssp(int num_arguments, char** argument_array) {
   // ^^ Honestly don't love the operator overloading here -- it feels unexpected.  I'd prefer `csr.load(coo)` or, even better, `csr = coo.tocsr()` or `csr = to_csr(coo)`
 
   // --
-  // Build graph
+  // Build graph + metadata
   
   auto G    = graph::build::from_csr_t<memory_space_t::device>(&csr);
   auto meta = graph::build::meta_graph(&csr);
