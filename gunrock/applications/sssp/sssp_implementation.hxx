@@ -43,11 +43,8 @@ struct sssp_result_t {
     meta_t* meta
   ) {
      distances.resize(meta->get_number_of_vertices());
-     
      predecessors.resize(meta->get_number_of_vertices());
-     
      visited.resize(meta->get_number_of_vertices());
-     thrust::fill(thrust::device, visited.begin(), visited.end(), -1);
   }
 };
 
@@ -80,18 +77,23 @@ struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
     predecessors  = result.predecessors.data().get();
     visited       = result.visited.data().get();
     
+    auto n_vertices = meta[0].get_number_of_vertices();
+    
     auto d_distances = thrust::device_pointer_cast(distances);
     thrust::fill(
       thrust::device,
       d_distances + 0,
-      d_distances + meta[0].get_number_of_vertices(),
+      d_distances + n_vertices,
       std::numeric_limits<weight_t>::max()
     );
     thrust::fill(thrust::device, d_distances + single_source, d_distances + single_source + 1, 0);
+    
+    auto d_visited = thrust::device_pointer_cast(visited);
+    thrust::fill(thrust::device, d_visited + 0, d_visited + n_vertices, -1);
   }
 
-  sssp_problem_t(const sssp_problem_t& rhs) = delete;
-  sssp_problem_t& operator=(const sssp_problem_t& rhs) = delete;
+  sssp_problem_t(const sssp_problem_t& rhs) = delete;            // Boilerplate? Can remove?
+  sssp_problem_t& operator=(const sssp_problem_t& rhs) = delete; // Boilerplate? Can remove?
 };
 
 template <typename problem_t>
