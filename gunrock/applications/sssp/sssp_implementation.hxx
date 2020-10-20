@@ -77,7 +77,6 @@ struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
   weight_pointer_t distances;
   vertex_pointer_t predecessors;
   vertex_pointer_t visited;
-  result_t result;
 
   sssp_problem_t(d_graph_t* d_G,
                  meta_t* meta,

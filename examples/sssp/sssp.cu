@@ -44,15 +44,31 @@ void test_sssp(int num_arguments, char** argument_array) {
   using result_t  = sssp::sssp_result_t<graph_t>;
   using problem_t = sssp::sssp_problem_t<graph_t>;
   using enactor_t = sssp::sssp_enactor_t<problem_t>;
-  
-  vertex_t single_source = 0;
-  param_t  param(single_source);
-  result_t result(csr.number_of_rows);
 
   // --
   // Run
   
-  float elapsed = csr_run<problem_t, enactor_t>(csr, param, result);
+  auto G = graph::build::from_csr_t<memory_space_t::device>(
+      csr.number_of_rows,      // number of rows
+      csr.number_of_columns,   // number of columns
+      csr.number_of_nonzeros,  // number of edges
+      csr.row_offsets,         // row offsets
+      csr.column_indices,      // column indices
+      csr.nonzero_values);     // nonzero values
+
+  auto meta = graph::build::meta_graph(
+      csr.number_of_rows,      // number of rows
+      csr.number_of_columns,   // number of columns
+      csr.number_of_nonzeros); // number of edges
+
+  // !! Meta is buggy -- it doesn't actually have the right type information
+
+  vertex_t single_source = 0;
+  param_t  param(single_source);
+  
+  result_t result(csr.number_of_rows);
+
+  float elapsed = graph_run<problem_t, enactor_t>(G, meta, param, result);
 
   // --
   // Log

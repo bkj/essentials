@@ -51,29 +51,4 @@ float graph_run(graph_vector_t& G,
   return enactor->enact();
 }
 
-template <typename problem_t, 
-          typename enactor_t, 
-          typename param_t,
-          typename result_t,
-          typename csr_t>
-float csr_run(csr_t csr,
-              param_t& param,
-              result_t& result) {
-  
-  auto G = graph::build::from_csr_t<memory_space_t::device>(
-      csr.number_of_rows,      // number of rows
-      csr.number_of_columns,   // number of columns
-      csr.number_of_nonzeros,  // number of edges
-      csr.row_offsets,         // row offsets
-      csr.column_indices,      // column indices
-      csr.nonzero_values);     // nonzero values
-
-  auto meta = graph::build::meta_graph(
-      csr.number_of_rows,      // number of rows
-      csr.number_of_columns,   // number of columns
-      csr.number_of_nonzeros); // number of edges
-  
-  return graph_run<problem_t, enactor_t>(G, meta, param, result);
 }
-
-}  // namespace gunrock
