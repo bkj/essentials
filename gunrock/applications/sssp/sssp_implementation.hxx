@@ -17,9 +17,9 @@
 namespace gunrock {
 namespace sssp {
 
-template <typename d_graph_t>
+template <typename meta_t>
 struct sssp_param_t {
-   using vertex_t = typename d_graph_t::vertex_type;
+   using vertex_t = typename meta_t::vertex_type;
    
    vertex_t single_source;
    
@@ -30,53 +30,41 @@ struct sssp_param_t {
    }
 };
 
-template <typename d_graph_t>
+template <typename meta_t>
 struct sssp_result_t {
-  using vertex_t = typename d_graph_t::vertex_type;
-  using weight_t = typename d_graph_t::weight_type;
+  using vertex_t = typename meta_t::vertex_type;
+  using weight_t = typename meta_t::weight_type;
    
   thrust::device_vector<weight_t> distances;
   thrust::device_vector<vertex_t> predecessors;
   thrust::device_vector<vertex_t> visited;
    
   sssp_result_t(
-    vertex_t n_nodes
+    meta_t* meta
   ) {
-     distances.resize(n_nodes);
-     predecessors.resize(n_nodes);
-     visited.resize(n_nodes);
+     distances.resize(meta->get_number_of_vertices());
+     predecessors.resize(meta->get_number_of_vertices());
+     visited.resize(meta->get_number_of_vertices());
      thrust::fill(thrust::device, visited.begin(), visited.end(), -1);
   }
 };
 
 
-template <
-  typename d_graph_t, 
-  typename meta_t = graph::graph_t<
-    memory::memory_space_t::host, typename d_graph_t::vertex_type, typename d_graph_t::edge_type, typename d_graph_t::edge_type,
-    graph::graph_csr_t<
-      memory::memory_space_t::host, typename d_graph_t::vertex_type, typename d_graph_t::edge_type, typename d_graph_t::edge_type
-    >
-  >
->
+template <typename d_graph_t, typename meta_t>
 struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
-  
-  using param_t  = sssp_param_t<d_graph_t>;
-  using result_t = sssp_result_t<d_graph_t>;
-
-  using vertex_t = typename d_graph_t::vertex_type;
-  using weight_t = typename d_graph_t::weight_type;
-
-  using weight_pointer_t = typename d_graph_t::weight_pointer_t;
-  using vertex_pointer_t = typename d_graph_t::vertex_pointer_t; // Why do we have a special type for this? Why not `vertex_t*`?
-
-  // Useful types from problem_t
   using problem_t = problem_t<d_graph_t, meta_t>;
 
+  using param_t   = sssp_param_t<meta_t>;
+  using result_t  = sssp_result_t<meta_t>;
+
+  using vertex_t = typename meta_t::vertex_type;
+  using edge_t   = typename meta_t::edge_type;
+  using weight_t = typename meta_t::weight_type;
+
   vertex_t single_source;
-  weight_pointer_t distances;
-  vertex_pointer_t predecessors;
-  vertex_pointer_t visited;
+  weight_t* distances;
+  vertex_t* predecessors;
+  vertex_t* visited;
 
   sssp_problem_t(d_graph_t* d_G,
                  meta_t* meta,
@@ -104,13 +92,13 @@ struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
   sssp_problem_t& operator=(const sssp_problem_t& rhs) = delete;
 };
 
-template <typename algorithm_problem_t>
-struct sssp_enactor_t : enactor_t<algorithm_problem_t> {
-  using enactor_t = enactor_t<algorithm_problem_t>;
+template <typename problem_t>
+struct sssp_enactor_t : enactor_t<problem_t> {
+  using enactor_t = enactor_t<problem_t>;
 
-  using vertex_t = typename algorithm_problem_t::vertex_t;
-  using edge_t   = typename algorithm_problem_t::edge_t;
-  using weight_t = typename algorithm_problem_t::weight_t;
+  using vertex_t = typename problem_t::vertex_t;
+  using edge_t   = typename problem_t::edge_t;
+  using weight_t = typename problem_t::weight_t;
 
   /**
    * @brief Populate the initial frontier with a single source node from where
@@ -193,7 +181,7 @@ struct sssp_enactor_t : enactor_t<algorithm_problem_t> {
         G, enactor_t::get_enactor(), remove_completed_paths);
   }
 
-  sssp_enactor_t(algorithm_problem_t* _problem,
+  sssp_enactor_t(problem_t* _problem,
                  std::shared_ptr<cuda::multi_context_t> _context)
       : enactor_t(_problem, _context) {}
 

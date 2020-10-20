@@ -20,8 +20,6 @@ void test_sssp(int num_arguments, char** argument_array) {
   using edge_t   = int;
   using weight_t = float;
   
-  constexpr memory::memory_space_t d_space = memory::memory_space_t::device;
-  
   // --
   // IO
   
@@ -30,43 +28,30 @@ void test_sssp(int num_arguments, char** argument_array) {
   io::matrix_market_t<vertex_t, edge_t, weight_t> mm;
   auto coo = mm.load(filename);
   
-  format::csr_t<d_space, vertex_t, edge_t, weight_t> csr;
-  csr = coo;
+  format::csr_t<memory::memory_space_t::device, vertex_t, edge_t, weight_t> csr;
+  csr = coo; 
+  // ^^ Honestly don't love the operator overloading here -- it feels unexpected.  I'd prefer `csr.load(coo)` or, even better, `csr = coo.tocsr()` or `csr = to_csr(coo)`
 
   // --
-  // Configure
-    
-  using graph_t = graph::graph_t<
-      d_space, vertex_t, edge_t, weight_t,
-      graph::graph_csr_t<d_space, vertex_t, edge_t, weight_t>>;
+  // Build graph
   
-  using param_t   = sssp::sssp_param_t<graph_t>;
-  using result_t  = sssp::sssp_result_t<graph_t>;
-  using problem_t = sssp::sssp_problem_t<graph_t>;
+  auto G    = graph::build::from_csr_t<memory_space_t::device>(&csr);
+  auto meta = graph::build::meta_graph(&csr);
+  
+  // --
+  // Setup problem
+  
+  using graph_t   = decltype(G)::value_type;
+  using meta_t    = decltype(meta)::value_type;
+  
+  using param_t   = sssp::sssp_param_t<meta_t>;
+  using result_t  = sssp::sssp_result_t<meta_t>;
+  using problem_t = sssp::sssp_problem_t<graph_t, meta_t>;
   using enactor_t = sssp::sssp_enactor_t<problem_t>;
-
-  // --
-  // Run
-  
-  auto G = graph::build::from_csr_t<memory_space_t::device>(
-      csr.number_of_rows,      // number of rows
-      csr.number_of_columns,   // number of columns
-      csr.number_of_nonzeros,  // number of edges
-      csr.row_offsets,         // row offsets
-      csr.column_indices,      // column indices
-      csr.nonzero_values);     // nonzero values
-
-  auto meta = graph::build::meta_graph(
-      csr.number_of_rows,      // number of rows
-      csr.number_of_columns,   // number of columns
-      csr.number_of_nonzeros); // number of edges
-
-  // !! Meta is buggy -- it doesn't actually have the right type information
 
   vertex_t single_source = 0;
   param_t  param(single_source);
-  
-  result_t result(csr.number_of_rows);
+  result_t result(meta.data());
 
   float elapsed = graph_run<problem_t, enactor_t>(G, meta, param, result);
 

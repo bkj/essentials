@@ -92,7 +92,7 @@ auto from_csr_t(typename vertex_vector_t::value_type const& r,
                 vertex_vector_t& Aj,
                 weight_vector_t& Ax) {
   using vertex_type = typename vertex_vector_t::value_type;
-  using edge_type = typename edge_vector_t::value_type;
+  using edge_type   = typename edge_vector_t::value_type;
   using weight_type = typename weight_vector_t::value_type;
 
   auto Ap_ptr = memory::raw_pointer_cast(Ap.data());
@@ -117,11 +117,43 @@ auto from_csr_t(typename vertex_vector_t::value_type const& r,
   return O;
 }
 
-template <typename vertex_t, typename edge_t>
-auto meta_graph(vertex_t const& r, vertex_t const& c, edge_t const& nnz) {
-  using vertex_type = vertex_t;
-  using edge_type = edge_t;
-  using weight_type = edge_t;
+template <memory_space_t space, typename csr_t>
+auto from_csr_t(csr_t* csr) {
+  return from_csr_t<space>(
+      csr->number_of_rows,      // number of rows
+      csr->number_of_columns,   // number of columns
+      csr->number_of_nonzeros,  // number of edges
+      csr->row_offsets,         // row offsets
+      csr->column_indices,      // column indices
+      csr->nonzero_values);  
+}
+
+// template <typename vertex_t, typename edge_t>
+// auto meta_graph(vertex_t const& r, vertex_t const& c, edge_t const& nnz) {
+//   using vertex_type = vertex_t;
+//   using edge_type   = edge_t;
+//   using weight_type = edge_t;
+
+//   constexpr memory_space_t space = memory_space_t::host;
+
+//   using graph_type = graph::graph_t<
+//       space, vertex_type, edge_type, weight_type,
+//       graph::graph_csr_t<space, vertex_type, edge_type, weight_type>>;
+
+//   typename vector<graph_type, space>::type O(1);
+//   graph_type G;
+
+//   G.set(r, c, nnz, nullptr, nullptr, nullptr);
+//   host::csr_t<graph_type>(G, memory::raw_pointer_cast(O.data()));
+
+//   return O;
+// }
+
+template <typename csr_t>
+auto meta_graph(csr_t* csr) {
+  using vertex_type = typename decltype(csr->row_offsets)::value_type;
+  using edge_type   = typename decltype(csr->column_indices)::value_type;
+  using weight_type = typename decltype(csr->nonzero_values)::value_type;
 
   constexpr memory_space_t space = memory_space_t::host;
 
@@ -132,7 +164,7 @@ auto meta_graph(vertex_t const& r, vertex_t const& c, edge_t const& nnz) {
   typename vector<graph_type, space>::type O(1);
   graph_type G;
 
-  G.set(r, c, nnz, nullptr, nullptr, nullptr);
+  G.set(csr->number_of_rows, csr->number_of_columns, csr->number_of_nonzeros, nullptr, nullptr, nullptr);
   host::csr_t<graph_type>(G, memory::raw_pointer_cast(O.data()));
 
   return O;

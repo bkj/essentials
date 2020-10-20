@@ -22,9 +22,9 @@ template <typename problem_t,
           typename param_t,
           typename result_t,
           typename graph_vector_t,
-          typename meta_t>
+          typename meta_vector_t>
 float graph_run(graph_vector_t& G,
-           meta_t& meta,
+           meta_vector_t& meta,
            param_t& param,
            result_t& result) {
 
