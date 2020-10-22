@@ -7,11 +7,11 @@ mv test_wrap.cxx test_wrap.cu
 
 # <<
 nvcc -c test_wrap.cu \
+  -std=c++14 \
   -Xcompiler "-fPIC -march=native -I /home/ubuntu/anaconda3/include/python3.7m -I /home/ubuntu/anaconda3/pkgs/numpy-1.16.5-py36h95a1406_0/lib/python3.6/site-packages/numpy/core/include" \
-  -I..    \
-  -I../.. \
-  -I"../../externals/moderngpu/src" \
-  --expt-extended-lambda
+  -I.. -I../..   -I"../../externals/moderngpu/src" \
+  --expt-extended-lambda \
+  --expt-relaxed-constexpr 
 
 # # --
 # "/usr/local/cuda/bin/nvcc" \
@@ -43,8 +43,3 @@ python -c "import test; print(test.do_testF())"
 python -c "import test; print(test.do_another_test())"
 python -c "import test; print(test.yet_another_test())"
 python -c "import test; print(test.test_sssp())"
-
-# >>
-
-
-# <<

@@ -116,9 +116,9 @@ def do_test_ssspI(x, y):
     return _test.do_test_ssspI(x, y)
 do_test_ssspI = _test.do_test_ssspI
 
-def do_test_ssspF(x, y):
-    return _test.do_test_ssspF(x, y)
-do_test_ssspF = _test.do_test_ssspF
+def do_sssp_IIF(single_source, indptr, indices, data):
+    return _test.do_sssp_IIF(single_source, indptr, indices, data)
+do_sssp_IIF = _test.do_sssp_IIF
 # This file is compatible with both classic and new-style classes.
 
 

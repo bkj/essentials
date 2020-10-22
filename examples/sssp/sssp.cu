@@ -18,7 +18,7 @@ void test_sssp(int num_arguments, char** argument_array) {
   
   using vertex_t = int;
   using edge_t   = int;
-  using weight_t = float;
+  using weight_t = int;
   
   // --
   // IO
@@ -54,7 +54,7 @@ void test_sssp(int num_arguments, char** argument_array) {
   param_t  param(single_source);
   result_t result(meta.data()); // Don't love having to call `.data()`, but couldn't figure out how to work around
 
-  float elapsed = graph_run<problem_t, enactor_t>(G, meta, param, result);
+  float elapsed = run<problem_t, enactor_t>(G, meta, param, result);
 
   // --
   // Log
