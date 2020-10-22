@@ -7,10 +7,14 @@
 using namespace gunrock;
 using namespace memory;
 
+// Nothing about this is specific to python -- a version of this could be used as an interface for all external APIs
+
 template <typename vertex_t, typename edge_t, typename weight_t>
 void do_sssp(vertex_t single_source, edge_t* indptr, int n_indptr, vertex_t* indices, int n_indices, weight_t* data, int n_data) {
   format::csr_t<memory::memory_space_t::device, vertex_t, edge_t, weight_t> csr(n_indptr - 1, n_indptr - 1, n_indices);
   
+  // I'm sure there's a better way to get data from host pointers to thrust::device_vector?
+  // @neoblizz -- what's the right way to do this?
   thrust::host_vector<edge_t> h_indptr(n_indptr);
   thrust::host_vector<vertex_t> h_indices(n_indices);
   thrust::host_vector<weight_t> h_data(n_data);
