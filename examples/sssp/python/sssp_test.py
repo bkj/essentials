@@ -9,13 +9,13 @@ from scipy import sparse
 # --
 # Random graph
 
-x = sparse.random(100, 100, density=0.1)
-x = (x + x.T) > 0
-x.data = x.data.astype(np.float32)
+csr = sparse.random(100, 100, density=0.1)
+csr = (csr + csr.T) > 0
+csr.data = csr.data.astype(np.float32)
 
 # --
 # Run
 
-for single_source in range(10):
-  res = gunrock_sssp.do_sssp_IIF(single_source, x.indptr, x.indices, x.data)
-  print(res)
+single_source = 0
+distances     = gunrock_sssp.run_sssp_IIF(single_source, csr.indptr, csr.indices, csr.data)
+print(distances)

@@ -10,26 +10,17 @@ using namespace memory;
 // Nothing about this is specific to python -- a version of this could be used as an interface for all external APIs
 
 template <typename vertex_t, typename edge_t, typename weight_t>
-void do_sssp(vertex_t single_source, edge_t* indptr, int n_indptr, vertex_t* indices, int n_indices, weight_t* data, int n_data) {
-  format::csr_t<memory::memory_space_t::device, vertex_t, edge_t, weight_t> csr(n_indptr - 1, n_indptr - 1, n_indices);
+void run_sssp(vertex_t single_source, weight_t** distances, int n_nodes, int n_edges, edge_t* row_offsets, vertex_t* column_indices, weight_t* nonzero_values) {
+  format::csr_t<memory::memory_space_t::device, vertex_t, edge_t, weight_t> csr(n_nodes, n_nodes, n_edges);
   
-  // I'm sure there's a better way to get data from host pointers to thrust::device_vector?
-  // @neoblizz -- what's the right way to do this?
-  thrust::host_vector<edge_t> h_indptr(n_indptr);
-  thrust::host_vector<vertex_t> h_indices(n_indices);
-  thrust::host_vector<weight_t> h_data(n_data);
-
-  thrust::device_vector<edge_t> d_indptr(n_indptr);
-  thrust::device_vector<vertex_t> d_indices(n_indices);
-  thrust::device_vector<weight_t> d_data(n_data);
+  // !! I'm assuming this does not copy data?
+  thrust::host_vector<edge_t> h_row_offsets(row_offsets, row_offsets + n_nodes + 1);
+  thrust::host_vector<vertex_t> h_column_indices(column_indices, column_indices + n_edges);
+  thrust::host_vector<weight_t> h_nonzero_values(nonzero_values, nonzero_values + n_edges);
   
-  for(int i = 0; i < n_indptr; i++)  h_indptr[i] = indptr[i];
-  for(int i = 0; i < n_indices; i++) h_indices[i] = indices[i];
-  for(int i = 0; i < n_data; i++)    h_data[i] = data[i];
-  
-  csr.row_offsets    = h_indptr;
-  csr.column_indices = h_indices;
-  csr.nonzero_values = h_data;
+  csr.row_offsets    = h_row_offsets;
+  csr.column_indices = h_column_indices;
+  csr.nonzero_values = h_nonzero_values;
   
   // --
   // Build graph + metadata
@@ -57,10 +48,15 @@ void do_sssp(vertex_t single_source, edge_t* indptr, int n_indptr, vertex_t* ind
   // Log
 
   std::cout << "Distances (output) = ";
-  thrust::copy(result.distances.begin(), result.distances.end(),
-               std::ostream_iterator<weight_t>(std::cout, " ")); // !! Helper function for printing vectors?
+  thrust::copy(result.distances.begin(), result.distances.end(), std::ostream_iterator<weight_t>(std::cout, " "));
   std::cout << std::endl;
   std::cout << "SSSP Elapsed Time: " << elapsed << " (ms)" << std::endl;
+  
+  // --
+  // Return results
+  
+  *distances = (weight_t*)malloc(n_nodes * sizeof(weight_t));
+  cudaMemcpy(*distances, thrust::raw_pointer_cast(result.distances.data()), n_nodes * sizeof(weight_t), cudaMemcpyDeviceToHost);
 }
 
 #endif
