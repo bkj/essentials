@@ -1,4 +1,8 @@
-import test
+"""
+  sssp_test.py
+"""
+
+import gunrock_sssp
 import numpy as np
 from scipy import sparse
 
@@ -13,5 +17,5 @@ x.data = x.data.astype(np.float32)
 # Run
 
 for single_source in range(10):
-  res = test.do_sssp_IIF(single_source, x.indptr, x.indices, x.data)
+  res = gunrock_sssp.do_sssp_IIF(single_source, x.indptr, x.indices, x.data)
   print(res)

@@ -1,9 +1,8 @@
-%module test
+%module gunrock_sssp
 
 %{
-/* Includes the header in the wrapper code */
 #define SWIG_FILE_WITH_INIT
-#include "test.cuh"
+#include "gunrock_sssp.cuh"
 %}
 
 %include "numpy.i"
@@ -17,6 +16,6 @@ import_array();
 %apply (int* IN_ARRAY1, int DIM1)   {(int* data, int n_data)};
 %apply (float* IN_ARRAY1, int DIM1) {(float* data, int n_data)};
 
-%include "test.cuh"
+%include "gunrock_sssp.cuh"
 
 %template(do_sssp_IIF) do_sssp<int, int, float>;
