@@ -96,26 +96,6 @@ except __builtin__.Exception:
     _newclass = 0
 
 
-def do_another_test():
-    return _test.do_another_test()
-do_another_test = _test.do_another_test
-
-def yet_another_test():
-    return _test.yet_another_test()
-yet_another_test = _test.yet_another_test
-
-def do_testI():
-    return _test.do_testI()
-do_testI = _test.do_testI
-
-def do_testF():
-    return _test.do_testF()
-do_testF = _test.do_testF
-
-def do_test_ssspI(x, y):
-    return _test.do_test_ssspI(x, y)
-do_test_ssspI = _test.do_test_ssspI
-
 def do_sssp_IIF(single_source, indptr, indices, data):
     return _test.do_sssp_IIF(single_source, indptr, indices, data)
 do_sssp_IIF = _test.do_sssp_IIF

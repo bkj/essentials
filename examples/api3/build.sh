@@ -38,8 +38,4 @@ nvcc -c test_wrap.cu \
 g++ -fPIC -march=native test_wrap.o -shared -lcudart -L /usr/local/cuda-11.1/lib64 -o _test.so
 rm -f test_wrap.cu test.o test_wrap.o
 
-python -c "import test; print(test.do_testI())"
-python -c "import test; print(test.do_testF())"
-python -c "import test; print(test.do_another_test())"
-python -c "import test; print(test.yet_another_test())"
-python -c "import test; print(test.test_sssp())"
+python sssp_test.py

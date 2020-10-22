@@ -12,6 +12,6 @@ x.data = x.data.astype(np.float32)
 # --
 # Run
 
-single_source = 0
-res = test.do_sssp_IIF(single_source, x.indptr, x.indices, x.data)
-print(res)
+for single_source in range(10):
+  res = test.do_sssp_IIF(single_source, x.indptr, x.indices, x.data)
+  print(res)
