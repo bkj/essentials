@@ -111,6 +111,14 @@ do_testI = _test.do_testI
 def do_testF():
     return _test.do_testF()
 do_testF = _test.do_testF
+
+def do_test_ssspI(x, y):
+    return _test.do_test_ssspI(x, y)
+do_test_ssspI = _test.do_test_ssspI
+
+def do_test_ssspF(x, y):
+    return _test.do_test_ssspF(x, y)
+do_test_ssspF = _test.do_test_ssspF
 # This file is compatible with both classic and new-style classes.
 
 

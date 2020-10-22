@@ -1,15 +1,14 @@
+import test
+import ctypes
+
 import numpy as np
-import pyCUREVERSE as rv
 
-for _ in range(10):
-  for reverse, dtype in [(rv.reverseI, np.int32), 
-                        (rv.reverseL, np.int64),
-                        (rv.reverseF, np.float32),
-                        (rv.reverseD, np.float64)]:
+x = np.arange(1, 5).astype(np.int32)
+y = np.arange(1, 10).astype(np.int32)
+res = test.do_test_ssspI(x, y)
+print(res)
 
-      X = np.arange(100, dtype=dtype)
-      reverse(X)
-      
-      print(X)
-
-
+x = np.arange(1, 5).astype(np.float32)
+y = np.arange(1, 10).astype(np.float32)
+res = test.do_test_ssspF(x, y)
+print(res)
