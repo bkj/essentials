@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # !! <TODO> : Makefile for this.  There's some conflict w/ one of the flags that breaks the python bindings.
+# !! <TODO> : Actually return results from C, instead of just printing
 
 # --
 # Cleanup

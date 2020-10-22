@@ -1,5 +1,5 @@
-#ifndef PYCUREVERSE_CUH
-#define PYCUREVERSE_CUH
+#ifndef PYSSSP_CUH
+#define PYSSSP_CUH
 
 #include <gunrock/applications/runner.hxx>
 #include <gunrock/applications/sssp/sssp_implementation.hxx>
