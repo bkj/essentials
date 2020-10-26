@@ -91,6 +91,7 @@ auto from_csr_t(typename vertex_vector_t::value_type const& r,
                 edge_vector_t& Ap,
                 vertex_vector_t& Aj,
                 weight_vector_t& Ax) {
+  
   using vertex_type = typename vertex_vector_t::value_type;
   using edge_type   = typename edge_vector_t::value_type;
   using weight_type = typename weight_vector_t::value_type;
@@ -147,6 +148,29 @@ auto meta_from_csr_t(csr_t* csr) {
   host::csr_t<graph_type>(G, memory::raw_pointer_cast(O.data()));
 
   return O;
+}
+
+
+template <
+  memory_space_t space,
+  typename vertex_type,
+  typename edge_type, 
+  typename weight_type,
+  typename graph_type = graph_t<
+      space, vertex_type, edge_type, weight_type,
+      graph::graph_csr_t<space, vertex_type, edge_type, weight_type>>
+>
+graph_type make_graph(
+  vertex_type  r,
+  vertex_type  c,
+  edge_type    nnz,
+  edge_type*   Ap_ptr,
+  vertex_type* Aj_ptr,
+  weight_type* Ax_ptr
+) {
+  graph_type G;
+  G.set(r, c, nnz, Ap_ptr, Aj_ptr, Ax_ptr);
+  return G;
 }
 
 }  // namespace build
