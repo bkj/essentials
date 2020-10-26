@@ -51,7 +51,6 @@ struct sssp_result_t {
 
 template <typename d_graph_t, typename meta_t>
 struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
-  using problem_t = problem_t<d_graph_t, meta_t>;
 
   using param_t   = sssp_param_t<meta_t>;
   using result_t  = sssp_result_t<meta_t>;
@@ -70,7 +69,7 @@ struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
                  std::shared_ptr<cuda::multi_context_t> context,
                  param_t& param,
                  result_t& result)
-      : problem_t(d_G, meta, context) {
+      : problem_t<d_graph_t, meta_t>(d_G, meta, context) {
     
     single_source = param.single_source;
     distances     = result.distances.data().get();
@@ -98,8 +97,8 @@ struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
 
 template <typename problem_t>
 struct sssp_enactor_t : enactor_t<problem_t> {
-  using enactor_t = enactor_t<problem_t>;
-
+  using enactor_type = enactor_t<problem_t>;
+  
   using vertex_t = typename problem_t::vertex_t;
   using edge_t   = typename problem_t::edge_t;
   using weight_t = typename problem_t::weight_t;
@@ -111,8 +110,8 @@ struct sssp_enactor_t : enactor_t<problem_t> {
    * @param context
    */
   void prepare_frontier(cuda::standard_context_t* context) override {
-    auto P = enactor_t::get_problem_pointer();
-    auto f = enactor_t::get_active_frontier_buffer();
+    auto P = enactor_type::get_problem_pointer();
+    auto f = enactor_type::get_active_frontier_buffer();
     f->push_back(P->single_source);
   }
 
@@ -128,14 +127,14 @@ struct sssp_enactor_t : enactor_t<problem_t> {
    */
   void loop(cuda::standard_context_t* context) override {
     // Data slice
-    auto P = enactor_t::get_problem_pointer();
+    auto P = enactor_type::get_problem_pointer();
     auto G = P->get_graph_pointer();
     
     auto distances     = P->distances;
     auto single_source = P->single_source;
     auto visited       = P->visited;
     
-    auto iteration = enactor_t::iteration;
+    auto iteration = enactor_type::iteration;
 
     /**
      * @brief Lambda operator to advance to neighboring vertices from the
@@ -180,16 +179,16 @@ struct sssp_enactor_t : enactor_t<problem_t> {
     operators::advance::execute<operators::advance_type_t::vertex_to_vertex,
                                 operators::advance_direction_t::forward,
                                 operators::load_balance_t::merge_path>(
-        G, enactor_t::get_enactor(), shortest_path, context);
+        G, enactor_type::get_enactor(), shortest_path, context);
 
     // Execute filter operator on the provided lambda
-    operators::filter::execute<operators::filter_type_t::predicated>(
-        G, enactor_t::get_enactor(), remove_completed_paths);
+    operators::filter::execute<operators::filter_type_t::uniquify>(
+        G, enactor_type::get_enactor(), remove_completed_paths, context);
   }
 
   sssp_enactor_t(problem_t* _problem,
                  std::shared_ptr<cuda::multi_context_t> _context)
-      : enactor_t(_problem, _context) {}
+      : enactor_type(_problem, _context) {}
 
   sssp_enactor_t(const sssp_enactor_t& rhs) = delete;            // Boilerplate? Can remove?
   sssp_enactor_t& operator=(const sssp_enactor_t& rhs) = delete; // Boilerplate? Can remove?
