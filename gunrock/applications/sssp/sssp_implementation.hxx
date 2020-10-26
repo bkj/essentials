@@ -194,5 +194,55 @@ struct sssp_enactor_t : enactor_t<problem_t> {
   sssp_enactor_t& operator=(const sssp_enactor_t& rhs) = delete; // Boilerplate? Can remove?
 };  // struct sssp_enactor_t
 
+template <typename d_graph_t, typename meta_t>
+struct sssp_runner_t {
+  
+  using param_t   = sssp_param_t<meta_t>;
+  using result_t  = sssp_result_t<meta_t>;
+  using problem_t = sssp_problem_t<d_graph_t, meta_t>;
+  using enactor_t = sssp_enactor_t<problem_t>;
+
+  using vertex_t = typename meta_t::vertex_type;
+  using weight_t = typename meta_t::weight_type;
+
+  d_graph_t* G;
+  meta_t*    meta;
+  param_t    param;
+  result_t   result;
+  
+  sssp_runner_t(
+    d_graph_t* G_,
+    meta_t* meta_,
+    vertex_t single_source_
+  ) : param(single_source_), result(meta_) {
+    G    = G_;
+    meta = meta_;
+  }
+  
+  float run() {
+    // Create contexts for all the devices
+    std::vector<cuda::device_id_t> devices;
+    devices.push_back(0);
+
+    auto multi_context = std::shared_ptr<cuda::multi_context_t>(
+        new cuda::multi_context_t(devices));
+
+    std::shared_ptr<problem_t> problem(
+      std::make_shared<problem_t>(
+        G,             // input graph (GPU)
+        meta,          // metadata    (CPU)
+        multi_context, // input context
+        param,         // input parameters
+        result));      // output results
+
+    std::shared_ptr<enactor_t> enactor(
+      std::make_shared<enactor_t>(
+        problem.get(),
+        multi_context));
+
+    return enactor->enact();
+  }
+};
+
 }  // namespace sssp
 }  // namespace gunrock
