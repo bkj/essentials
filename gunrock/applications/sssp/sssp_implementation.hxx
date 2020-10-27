@@ -40,11 +40,11 @@ struct sssp_result_t {
   thrust::device_vector<vertex_t> visited;
    
   sssp_result_t(
-    meta_t* meta
+    meta_t& meta
   ) {
-     distances.resize(meta->get_number_of_vertices());
-     predecessors.resize(meta->get_number_of_vertices());
-     visited.resize(meta->get_number_of_vertices());
+     distances.resize(meta.get_number_of_vertices());
+     predecessors.resize(meta.get_number_of_vertices());
+     visited.resize(meta.get_number_of_vertices());
   }
 };
 

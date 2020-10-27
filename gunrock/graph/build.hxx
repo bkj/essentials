@@ -114,7 +114,7 @@ auto from_csr_t(typename vertex_vector_t::value_type const& r,
     host::csr_t<graph_type>(G, memory::raw_pointer_cast(O.data()));
   }
 
-  return O;
+  return O[0];
 }
 
 template <memory_space_t space, typename csr_t>
@@ -146,7 +146,7 @@ auto meta_from_csr_t(csr_t* csr) {
   G.set(csr->number_of_rows, csr->number_of_columns, csr->number_of_nonzeros, nullptr, nullptr, nullptr);
   host::csr_t<graph_type>(G, memory::raw_pointer_cast(O.data()));
 
-  return O;
+  return O[0];
 }
 
 }  // namespace build

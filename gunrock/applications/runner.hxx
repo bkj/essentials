@@ -21,10 +21,10 @@ template <typename problem_t,
           typename enactor_t, 
           typename param_t,
           typename result_t,
-          typename graph_vector_t,
-          typename meta_vector_t>
-float run(graph_vector_t& G,
-           meta_vector_t& meta,
+          typename graph_t,
+          typename meta_t>
+float run(graph_t& G,
+           meta_t& meta,
            param_t& param,
            result_t& result) {
 
@@ -37,8 +37,8 @@ float run(graph_vector_t& G,
 
   std::shared_ptr<problem_t> problem(
     std::make_shared<problem_t>(
-      G.data().get(),    // input graph (GPU)
-      meta.data(),       // metadata    (CPU)
+      G,                 // input graph (GPU)
+      meta,              // metadata    (CPU)
       multi_context,     // input context
       param,             // input parameters
       result));          // output results
