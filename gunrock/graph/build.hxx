@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include <tuple>
+
 namespace gunrock {
 namespace graph {
 namespace build {
@@ -91,6 +93,7 @@ auto from_csr_t(typename vertex_vector_t::value_type const& r,
                 edge_vector_t& Ap,
                 vertex_vector_t& Aj,
                 weight_vector_t& Ax) {
+  
   using vertex_type = typename vertex_vector_t::value_type;
   using edge_type   = typename edge_vector_t::value_type;
   using weight_type = typename weight_vector_t::value_type;
@@ -99,6 +102,7 @@ auto from_csr_t(typename vertex_vector_t::value_type const& r,
   auto Aj_ptr = memory::raw_pointer_cast(Aj.data());
   auto Ax_ptr = memory::raw_pointer_cast(Ax.data());
 
+  // Graph
   using graph_type = graph::graph_t<
       space, vertex_type, edge_type, weight_type,
       graph::graph_csr_t<space, vertex_type, edge_type, weight_type>>;
@@ -113,8 +117,21 @@ auto from_csr_t(typename vertex_vector_t::value_type const& r,
   } else {
     host::csr_t<graph_type>(G, memory::raw_pointer_cast(O.data()));
   }
+  
+  // Meta
+  constexpr memory_space_t h_space = memory_space_t::host;
 
-  return O;
+  using meta_type = graph::graph_t<
+      h_space, vertex_type, edge_type, weight_type,
+      graph::graph_csr_t<h_space, vertex_type, edge_type, weight_type>>;
+
+  typename vector<meta_type, h_space>::type P(1);
+  meta_type M;
+
+  M.set(r, c, nnz, nullptr, nullptr, nullptr);
+  host::csr_t<meta_type>(M, memory::raw_pointer_cast(P.data()));
+  
+  return std::make_pair(O, P);
 }
 
 template <memory_space_t space, typename csr_t>
@@ -126,27 +143,6 @@ auto from_csr_t(csr_t* csr) {
       csr->row_offsets,         // row offsets
       csr->column_indices,      // column indices
       csr->nonzero_values);  
-}
-
-template <typename csr_t>
-auto meta_from_csr_t(csr_t* csr) {
-  using vertex_type = typename decltype(csr->row_offsets)::value_type;
-  using edge_type   = typename decltype(csr->column_indices)::value_type;
-  using weight_type = typename decltype(csr->nonzero_values)::value_type;
-
-  constexpr memory_space_t space = memory_space_t::host;
-
-  using graph_type = graph::graph_t<
-      space, vertex_type, edge_type, weight_type,
-      graph::graph_csr_t<space, vertex_type, edge_type, weight_type>>;
-
-  typename vector<graph_type, space>::type O(1);
-  graph_type G;
-
-  G.set(csr->number_of_rows, csr->number_of_columns, csr->number_of_nonzeros, nullptr, nullptr, nullptr);
-  host::csr_t<graph_type>(G, memory::raw_pointer_cast(O.data()));
-
-  return O;
 }
 
 }  // namespace build

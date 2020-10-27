@@ -32,11 +32,19 @@ void test_sssp(int num_arguments, char** argument_array) {
   // --
   // Build graph + metadata
   
-  auto G    = graph::build::from_csr_t<memory_space_t::device>(&csr);
-  auto meta = graph::build::meta_from_csr_t(&csr);
+  auto [G, meta] = graph::build::from_csr_t<memory_space_t::device>(&csr);
   
   using graph_t = decltype(G)::value_type;
   using meta_t  = decltype(meta)::value_type;
+  
+  // --
+  // Params and memory allocation
+  
+  vertex_t single_source = 0;
+  
+  vertex_t n_vertices = meta[0].get_number_of_vertices();
+  thrust::device_vector<weight_t> distances(n_vertices);
+  thrust::device_vector<vertex_t> predecessors(n_vertices);
   
   // --
   // Setup problem
@@ -46,14 +54,7 @@ void test_sssp(int num_arguments, char** argument_array) {
   using problem_t = sssp::sssp_problem_t<graph_t, meta_t>;
   using enactor_t = sssp::sssp_enactor_t<problem_t>;
 
-  vertex_t single_source = 0;
   param_t  param(single_source);
-  
-  vertex_t n_vertices = meta[0].get_number_of_vertices();
-  
-  thrust::device_vector<weight_t> distances(n_vertices);
-  thrust::device_vector<vertex_t> predecessors(n_vertices);
-  
   result_t result(
     distances.data().get(),
     predecessors.data().get()
