@@ -193,5 +193,50 @@ struct sssp_enactor_t : enactor_t<problem_t> {
   sssp_enactor_t& operator=(const sssp_enactor_t& rhs) = delete; // Boilerplate? Can remove?
 };  // struct sssp_enactor_t
 
+// !! This should go somewhere else -- @neoblizz, where?
+auto get_default_context() {
+  std::vector<cuda::device_id_t> devices;
+  devices.push_back(0);
+
+  return std::shared_ptr<cuda::multi_context_t>(
+      new cuda::multi_context_t(devices));
+}
+
+template <
+  typename graph_vector_t,
+  typename meta_vector_t,
+  typename graph_t = typename graph_vector_t::value_type,
+  typename meta_t  = typename meta_vector_t::value_type>
+float run(
+  graph_vector_t& G,
+  meta_vector_t& meta,
+  typename meta_t::vertex_type& single_source, // Parameter
+  typename meta_t::weight_type* distances,     // Output
+  typename meta_t::vertex_type* predecessors   // Output
+) {
+  
+  using param_t   = sssp::sssp_param_t<meta_t>;
+  using result_t  = sssp::sssp_result_t<meta_t>;
+  using problem_t = sssp::sssp_problem_t<graph_t, meta_t>;
+  using enactor_t = sssp::sssp_enactor_t<problem_t>;
+  
+  param_t  param(single_source);
+  result_t result(distances, predecessors);
+
+  auto multi_context = get_default_context();
+
+  problem_t problem(
+      G.data().get(),    // input graph (GPU)
+      meta.data(),       // metadata    (CPU)
+      multi_context,     // input context
+      param,             // input parameters
+      result             // output results
+  );
+
+  enactor_t enactor(&problem, multi_context);
+
+  return enactor.enact();
+}
+
 }  // namespace sssp
 }  // namespace gunrock

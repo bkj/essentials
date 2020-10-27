@@ -1,6 +1,5 @@
 #include <cstdlib>  // EXIT_SUCCESS
 
-#include <gunrock/applications/runner.hxx>
 #include <gunrock/applications/sssp/sssp_implementation.hxx>
 
 using namespace gunrock;
@@ -34,9 +33,6 @@ void test_sssp(int num_arguments, char** argument_array) {
   
   auto [G, meta] = graph::build::from_csr_t<memory_space_t::device>(&csr);
   
-  using graph_t = decltype(G)::value_type;
-  using meta_t  = decltype(meta)::value_type;
-  
   // --
   // Params and memory allocation
   
@@ -47,21 +43,16 @@ void test_sssp(int num_arguments, char** argument_array) {
   thrust::device_vector<vertex_t> predecessors(n_vertices);
   
   // --
-  // Setup problem
+  // Run problem
   
-  using param_t   = sssp::sssp_param_t<meta_t>;
-  using result_t  = sssp::sssp_result_t<meta_t>;
-  using problem_t = sssp::sssp_problem_t<graph_t, meta_t>;
-  using enactor_t = sssp::sssp_enactor_t<problem_t>;
-
-  param_t  param(single_source);
-  result_t result(
+  float elapsed = gunrock::sssp::run(
+    G,
+    meta,
+    single_source,
     distances.data().get(),
-    predecessors.data().get()
+    predecessors.data().get()    
   );
-
-  float elapsed = run<problem_t, enactor_t>(G, meta, param, result);
-
+  
   // --
   // Log
   
