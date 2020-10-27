@@ -35,16 +35,15 @@ struct sssp_result_t {
   using vertex_t = typename meta_t::vertex_type;
   using weight_t = typename meta_t::weight_type;
    
-  thrust::device_vector<weight_t> distances;
-  thrust::device_vector<vertex_t> predecessors;
-  thrust::device_vector<vertex_t> visited;
-   
+  weight_t* distances;
+  vertex_t* predecessors;
+  
   sssp_result_t(
-    meta_t* meta
+    weight_t* distances_,
+    vertex_t* predecessors_
   ) {
-     distances.resize(meta->get_number_of_vertices());
-     predecessors.resize(meta->get_number_of_vertices());
-     visited.resize(meta->get_number_of_vertices());
+    distances    = distances_;
+    predecessors = predecessors_;
   }
 };
 
@@ -62,7 +61,8 @@ struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
   vertex_t single_source;
   weight_t* distances;
   vertex_t* predecessors;
-  vertex_t* visited;
+  
+  thrust::device_vector<vertex_t> visited;
 
   sssp_problem_t(d_graph_t* d_G,
                  meta_t* meta,
@@ -72,9 +72,8 @@ struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
       : problem_t<d_graph_t, meta_t>(d_G, meta, context) {
     
     single_source = param.single_source;
-    distances     = result.distances.data().get();
-    predecessors  = result.predecessors.data().get();
-    visited       = result.visited.data().get();
+    distances     = result.distances;
+    predecessors  = result.predecessors;
     
     auto n_vertices = meta[0].get_number_of_vertices();
     
@@ -87,8 +86,8 @@ struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
     );
     thrust::fill(thrust::device, d_distances + single_source, d_distances + single_source + 1, 0);
     
-    auto d_visited = thrust::device_pointer_cast(visited);
-    thrust::fill(thrust::device, d_visited + 0, d_visited + n_vertices, -1);
+    visited.resize(n_vertices);
+    thrust::fill(thrust::device, visited.begin(), visited.end(), -1);
   }
 
   sssp_problem_t(const sssp_problem_t& rhs) = delete;            // Boilerplate? Can remove?
@@ -132,7 +131,7 @@ struct sssp_enactor_t : enactor_t<problem_t> {
     
     auto distances     = P->distances;
     auto single_source = P->single_source;
-    auto visited       = P->visited;
+    auto visited       = P->visited.data().get();
     
     auto iteration = enactor_type::iteration;
 

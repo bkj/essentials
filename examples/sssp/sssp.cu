@@ -26,12 +26,8 @@ void test_sssp(int num_arguments, char** argument_array) {
   std::string filename = argument_array[1];
   
   io::matrix_market_t<vertex_t, edge_t, weight_t> mm;
-  auto coo = mm.load(filename);
-  
   format::csr_t<memory::memory_space_t::device, vertex_t, edge_t, weight_t> csr;
-  csr = coo; 
-  // ^^ Honestly don't love the operator overloading here -- it feels unexpected.  
-  // I'd prefer `csr.load(coo)` or, even better, `csr = coo.tocsr()` or `csr = to_csr(coo)`
+  csr.from_coo(mm.load(filename)); 
 
   // --
   // Build graph + metadata
@@ -52,7 +48,16 @@ void test_sssp(int num_arguments, char** argument_array) {
 
   vertex_t single_source = 0;
   param_t  param(single_source);
-  result_t result(meta.data());
+  
+  vertex_t n_vertices = meta[0].get_number_of_vertices();
+  
+  thrust::device_vector<weight_t> distances(n_vertices);
+  thrust::device_vector<vertex_t> predecessors(n_vertices);
+  
+  result_t result(
+    distances.data().get(),
+    predecessors.data().get()
+  );
 
   float elapsed = run<problem_t, enactor_t>(G, meta, param, result);
 
@@ -60,8 +65,7 @@ void test_sssp(int num_arguments, char** argument_array) {
   // Log
   
   std::cout << "Distances (output) = ";
-  thrust::copy(result.distances.begin(), result.distances.end(),
-               std::ostream_iterator<weight_t>(std::cout, " ")); // !! Helper function for printing vectors?
+  thrust::copy(distances.begin(), distances.end(), std::ostream_iterator<weight_t>(std::cout, " "));
   std::cout << std::endl;
   std::cout << "SSSP Elapsed Time: " << elapsed << " (ms)" << std::endl;
 }
