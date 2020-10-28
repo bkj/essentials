@@ -22,10 +22,7 @@ struct sssp_param_t {
    using vertex_t = typename meta_t::vertex_type;
    
    vertex_t single_source;
-   
-   sssp_param_t(
-     vertex_t single_source_
-   ) {
+   sssp_param_t(vertex_t single_source_) {
      single_source = single_source_;
    }
 };
@@ -57,34 +54,38 @@ struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
   using vertex_t = typename meta_t::vertex_type;
   using edge_t   = typename meta_t::edge_type;
   using weight_t = typename meta_t::weight_type;
-
-  vertex_t single_source;
-  weight_t* distances;
-  vertex_t* predecessors;
+  
+  param_t* param;
+  result_t* result;
   
   thrust::device_vector<vertex_t> visited;
 
-  sssp_problem_t(d_graph_t* d_G,
-                 meta_t* meta,
-                 std::shared_ptr<cuda::multi_context_t> context,
-                 param_t& param,
-                 result_t& result)
-      : problem_t<d_graph_t, meta_t>(d_G, meta, context) {
+  sssp_problem_t(
+    d_graph_t* G,
+    meta_t*    meta,
+    param_t*   param_,
+    result_t*  result_,
+    std::shared_ptr<cuda::multi_context_t> context
+  ) : problem_t<d_graph_t, meta_t>(G, meta, context), param(param_), result(result_) {
     
-    single_source = param.single_source;
-    distances     = result.distances;
-    predecessors  = result.predecessors;
-    
+    // Set initial values
+    // !! Ideally this owuld be in a `reset` function, but couldn't get it to work
     auto n_vertices = meta[0].get_number_of_vertices();
     
-    auto d_distances = thrust::device_pointer_cast(distances);
+    auto d_distances = thrust::device_pointer_cast(result->distances);
     thrust::fill(
       thrust::device,
       d_distances + 0,
       d_distances + n_vertices,
       std::numeric_limits<weight_t>::max()
     );
-    thrust::fill(thrust::device, d_distances + single_source, d_distances + single_source + 1, 0);
+    
+    thrust::fill(
+      thrust::device, 
+      d_distances + param->single_source,
+      d_distances + param->single_source + 1,
+      0
+    );
     
     visited.resize(n_vertices);
     thrust::fill(thrust::device, visited.begin(), visited.end(), -1);
@@ -111,7 +112,7 @@ struct sssp_enactor_t : enactor_t<problem_t> {
   void prepare_frontier(cuda::standard_context_t* context) override {
     auto P = enactor_type::get_problem_pointer();
     auto f = enactor_type::get_active_frontier_buffer();
-    f->push_back(P->single_source);
+    f->push_back(P->param->single_source);
   }
 
   /**
@@ -129,8 +130,8 @@ struct sssp_enactor_t : enactor_t<problem_t> {
     auto P = enactor_type::get_problem_pointer();
     auto G = P->get_graph_pointer();
     
-    auto distances     = P->distances;
-    auto single_source = P->single_source;
+    auto single_source = P->param->single_source;
+    auto distances     = P->result->distances;
     auto visited       = P->visited.data().get();
     
     auto iteration = enactor_type::iteration;
@@ -215,22 +216,23 @@ float run(
   typename meta_t::vertex_type* predecessors   // Output
 ) {
   
-  using param_t   = sssp::sssp_param_t<meta_t>;
-  using result_t  = sssp::sssp_result_t<meta_t>;
-  using problem_t = sssp::sssp_problem_t<graph_t, meta_t>;
-  using enactor_t = sssp::sssp_enactor_t<problem_t>;
+  using param_t   = gunrock::sssp::sssp_param_t<meta_t>;
+  using result_t  = gunrock::sssp::sssp_result_t<meta_t>;
+  using problem_t = gunrock::sssp::sssp_problem_t<graph_t, meta_t>;
+  using enactor_t = gunrock::sssp::sssp_enactor_t<problem_t>;
   
   param_t  param(single_source);
   result_t result(distances, predecessors);
 
+  // vv Shouldn't have to change anything below this line vv
   auto multi_context = get_default_context();
 
   problem_t problem(
       G.data().get(),    // input graph (GPU)
       meta.data(),       // metadata    (CPU)
-      multi_context,     // input context
-      param,             // input parameters
-      result             // output results
+      &param,            // input parameters
+      &result,           // output results
+      multi_context      // input context
   );
 
   enactor_t enactor(&problem, multi_context);
