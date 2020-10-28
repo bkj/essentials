@@ -1,9 +1,32 @@
 #include <cstdlib>  // EXIT_SUCCESS
+#include <set>
 
 #include <gunrock/applications/color/color_implementation.hxx>
 
 using namespace gunrock;
 using namespace memory;
+
+/**
+ * @brief Count unique number of colors used to color the graph.
+ *
+ * @tparam T
+ * @param v
+ * @return std::size_t
+ */
+template <typename T>
+std::size_t unique_colors(const thrust::host_vector<T>& v) {
+  std::size_t num_unique_elements = 0;
+  std::unordered_set<int> set;
+
+  for (const auto& elem : v) {
+    if (set.find(elem) == set.end()) {
+      set.insert(elem);
+      ++num_unique_elements;
+    }
+  }
+
+  return num_unique_elements;
+}
 
 void test_color(int num_arguments, char** argument_array) {
   
