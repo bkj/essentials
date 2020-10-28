@@ -10,50 +10,36 @@ namespace gunrock {
 namespace color {
 
 template <typename meta_t>
-struct color_param_t {
+struct param_t {
   // No parameters for this algorithm
 };
 
 template <typename meta_t>
-struct color_result_t {
+struct result_t {
   using vertex_t = typename meta_t::vertex_type;
    
   vertex_t* colors;
-  
-  color_result_t(
-    vertex_t* colors_
-  ) {
+  result_t(vertex_t* colors_) {
     colors = colors_;
   }
 };
 
-
-template <typename graph_t, typename meta_t>
-struct color_problem_t : problem_t<graph_t, meta_t> {
-
-  using param_t   = color_param_t<meta_t>;
-  using result_t  = color_result_t<meta_t>;
-
+template <typename graph_t, typename meta_t, typename param_t, typename result_t>
+struct problem_t : gunrock::problem_t<graph_t, meta_t, param_t, result_t> {
+  // Use Base class constructor -- does this work? does it handle copy constructor?
+  using gunrock::problem_t<graph_t, meta_t, param_t, result_t>::problem_t;
+  
   using vertex_t = typename meta_t::vertex_type;
   using edge_t   = typename meta_t::edge_type;
   using weight_t = typename meta_t::weight_type;
   
-  param_t* param;
-  result_t* result;
-  
   thrust::device_vector<vertex_t> randoms;
-
-  color_problem_t(
-    graph_t* G,
-    meta_t*    meta,
-    param_t*   param_,
-    result_t*  result_,
-    std::shared_ptr<cuda::multi_context_t> context
-  ) : problem_t<graph_t, meta_t>(G, meta, context), param(param_), result(result_) {
+  
+  void reset() {
     
     // XXX: Ugly. Initialize d_colors to be all INVALIDs.
-    auto n_vertices = meta->get_number_of_vertices();
-    auto d_colors   = thrust::device_pointer_cast(result->colors);
+    auto n_vertices = this->get_meta_pointer()->get_number_of_vertices();
+    auto d_colors   = thrust::device_pointer_cast(this->result->colors);
     thrust::fill(
       thrust::device,
       d_colors + 0,
@@ -64,23 +50,33 @@ struct color_problem_t : problem_t<graph_t, meta_t> {
     // Generate random numbers.
     randoms.resize(n_vertices);
     algo::generate::random::uniform_distribution(0, n_vertices, randoms.begin());
+    
   }
-
-  color_problem_t(const color_problem_t& rhs) = delete;            // Boilerplate? Can remove?
-  color_problem_t& operator=(const color_problem_t& rhs) = delete; // Boilerplate? Can remove?
 };
 
 template <typename problem_t>
-struct color_enactor_t : enactor_t<problem_t> {
-  using enactor_type = enactor_t<problem_t>;
+struct enactor_t : gunrock::enactor_t<problem_t> {
+  using gunrock::enactor_t<problem_t>::enactor_t;
   
   using vertex_t = typename problem_t::vertex_t;
   using edge_t   = typename problem_t::edge_t;
   using weight_t = typename problem_t::weight_t;
 
+  // <user-defined>
+  void prepare_frontier(cuda::standard_context_t* context) override {
+    auto E    = this->get_enactor();      // Enactor pointer
+    auto P    = E->get_problem_pointer();         // Problem pointer
+    auto meta = P->get_meta_pointer();            // metadata pointer
+    auto f    = E->get_active_frontier_buffer();  // active frontier
+
+    // XXX: Find a better way to initialize the frontier to all nodes
+    for (vertex_t v = 0; v < meta->get_number_of_vertices(); ++v)
+      f->push_back(v);
+  }
+  
   void loop(cuda::standard_context_t* context) override {
     // Data slice
-    auto E = enactor_type::get_enactor();
+    auto E = this->get_enactor();
     auto P = E->get_problem_pointer();
     auto G = P->get_graph_pointer();
 
@@ -135,30 +131,8 @@ struct color_enactor_t : enactor_t<problem_t> {
     operators::filter::execute<operators::filter_type_t::uniquify>(
         G, E, color_me_in, context);
   }
-
-  /**
-   * @brief Populate the initial frontier with a the entire graph (nodes).
-   *
-   * @param context
-   */
-  void prepare_frontier(cuda::standard_context_t* context) override {
-    auto E    = enactor_type::get_enactor();      // Enactor pointer
-    auto P    = E->get_problem_pointer();         // Problem pointer
-    auto meta = P->get_meta_pointer();            // metadata pointer
-    auto f    = E->get_active_frontier_buffer();  // active frontier
-
-    // XXX: Find a better way to initialize the frontier to all nodes
-    for (vertex_t v = 0; v < meta->get_number_of_vertices(); ++v)
-      f->push_back(v);
-  }
-
-  color_enactor_t(problem_t* _problem,
-                 std::shared_ptr<cuda::multi_context_t> _context)
-      : enactor_type(_problem, _context) {}
-
-  color_enactor_t(const color_enactor_t& rhs) = delete;            // Boilerplate? Can remove?
-  color_enactor_t& operator=(const color_enactor_t& rhs) = delete; // Boilerplate? Can remove?
-};  // struct color_enactor_t
+  // </user-defined>
+};  // struct enactor_t
 
 // !! This should go somewhere else -- @neoblizz, where?
 auto get_default_context() {
@@ -180,27 +154,28 @@ float run(
   typename meta_t::vertex_type* colors   // Output
 ) {
   
-  using param_t   = gunrock::color::color_param_t<meta_t>;
-  using result_t  = gunrock::color::color_result_t<meta_t>;
-  using problem_t = gunrock::color::color_problem_t<graph_t, meta_t>;
-  using enactor_t = gunrock::color::color_enactor_t<problem_t>;
-  
-  param_t  param;
-  result_t result(colors);
-
-  // vv Shouldn't have to change anything below this line vv
+  // <user-defined>
+  param_t<meta_t>  param;
+  result_t<meta_t> result(colors);
+  // </user-defined>
+  // <boiler-plate>
   auto multi_context = get_default_context();
 
-  problem_t problem(
+  using problem_type = problem_t<graph_t, meta_t, param_t<meta_t>, result_t<meta_t>>;
+  using enactor_type = enactor_t<problem_type>;
+  
+  problem_type problem(
       G.data().get(),    // input graph (GPU)
       meta.data(),       // metadata    (CPU)
       &param,            // input parameters
       &result,           // output results
       multi_context      // input context
   );
+  problem.reset();
 
-  enactor_t enactor(&problem, multi_context);
+  enactor_type enactor(&problem, multi_context);
   return enactor.enact();
+  // </boiler-plate>
 }
 
 }  // namespace color
