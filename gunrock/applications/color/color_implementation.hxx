@@ -62,6 +62,7 @@ struct color_problem_t : problem_t<graph_t, meta_t> {
     );
 
     // Generate random numbers.
+    randoms.resize(n_vertices);
     algo::generate::random::uniform_distribution(0, n_vertices, randoms.begin());
   }
 
@@ -141,13 +142,13 @@ struct color_enactor_t : enactor_t<problem_t> {
    * @param context
    */
   void prepare_frontier(cuda::standard_context_t* context) override {
-    auto E = enactor_type::get_enactor();      // Enactor pointer
-    auto P = E->get_problem_pointer();         // Problem pointer
-    auto g = P->get_host_graph_pointer();      // HOST graph pointer
-    auto f = E->get_active_frontier_buffer();  // active frontier
+    auto E    = enactor_type::get_enactor();      // Enactor pointer
+    auto P    = E->get_problem_pointer();         // Problem pointer
+    auto meta = P->get_meta_pointer();            // metadata pointer
+    auto f    = E->get_active_frontier_buffer();  // active frontier
 
     // XXX: Find a better way to initialize the frontier to all nodes
-    for (vertex_t v = 0; v < g->get_number_of_vertices(); ++v)
+    for (vertex_t v = 0; v < meta->get_number_of_vertices(); ++v)
       f->push_back(v);
   }
 
@@ -199,9 +200,7 @@ float run(
   );
 
   enactor_t enactor(&problem, multi_context);
-
-  // return enactor.enact();
-  return -1;
+  return enactor.enact();
 }
 
 }  // namespace color
