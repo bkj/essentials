@@ -11,8 +11,9 @@
  */
 #pragma once
 
-#include <gunrock/applications/application.hxx>
 #include <bits/stdc++.h>
+
+#include <gunrock/applications/application.hxx>
 
 namespace gunrock {
 namespace sssp {
@@ -45,8 +46,8 @@ struct sssp_result_t {
 };
 
 
-template <typename d_graph_t, typename meta_t>
-struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
+template <typename graph_t, typename meta_t>
+struct sssp_problem_t : problem_t<graph_t, meta_t> {
 
   using param_t   = sssp_param_t<meta_t>;
   using result_t  = sssp_result_t<meta_t>;
@@ -61,12 +62,12 @@ struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
   thrust::device_vector<vertex_t> visited;
 
   sssp_problem_t(
-    d_graph_t* G,
+    graph_t*   G,
     meta_t*    meta,
     param_t*   param_,
     result_t*  result_,
     std::shared_ptr<cuda::multi_context_t> context
-  ) : problem_t<d_graph_t, meta_t>(G, meta, context), param(param_), result(result_) {
+  ) : problem_t<graph_t, meta_t>(G, meta, context), param(param_), result(result_) {
     
     // Set initial values
     // !! Ideally this owuld be in a `reset` function, but couldn't get it to work
