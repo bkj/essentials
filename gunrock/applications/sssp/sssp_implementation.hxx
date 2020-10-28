@@ -96,8 +96,10 @@ struct enactor_t : gunrock::enactor_t<problem_t> {
 
   void loop(cuda::standard_context_t* context) override {
     // Data slice
+    auto E = this->get_enactor();
     auto P = this->get_problem_pointer();
     auto G = P->get_graph_pointer();
+    
     
     auto single_source = P->param->single_source;
     auto distances     = P->result->distances;
@@ -111,22 +113,22 @@ struct enactor_t : gunrock::enactor_t<problem_t> {
       edge_t const& edge,        // edge
       weight_t const& weight     // weight (tuple).
     ) -> bool {
-      weight_t source_distance = distances[source];  // use cached::load
+      weight_t source_distance      = distances[source];  // use cached::load
       weight_t distance_to_neighbor = source_distance + weight;
 
       // Check if the destination node has been claimed as someone's child
-      weight_t recover_distance =
-          math::atomic::min(&(distances[neighbor]), distance_to_neighbor);
+      weight_t recover_distance = math::atomic::min(&(distances[neighbor]), distance_to_neighbor);
 
       return (distance_to_neighbor < recover_distance);
     };
 
-    auto remove_completed_paths = [visited, iteration] __host__ __device__(
-                                      vertex_t const& vertex) -> bool {
+    auto remove_completed_paths = [visited, iteration] __host__ __device__(vertex_t const& vertex) -> bool {
       if (vertex == std::numeric_limits<vertex_t>::max())
         return false;
+        
       if (visited[vertex] == iteration)
         return false;
+        
       visited[vertex] = iteration;
       return true;
     };
@@ -135,11 +137,11 @@ struct enactor_t : gunrock::enactor_t<problem_t> {
     operators::advance::execute<operators::advance_type_t::vertex_to_vertex,
                                 operators::advance_direction_t::forward,
                                 operators::load_balance_t::merge_path>(
-        G, this->get_enactor(), shortest_path, context);
+        G, E, shortest_path, context);
 
     // Execute filter operator on the provided lambda
     operators::filter::execute<operators::filter_type_t::uniquify>(
-        G, this->get_enactor(), remove_completed_paths, context);
+        G, E, remove_completed_paths, context);
   }
 
 };  // struct enactor_t
