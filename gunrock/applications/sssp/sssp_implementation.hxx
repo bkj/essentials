@@ -18,7 +18,6 @@
 namespace gunrock {
 namespace sssp {
 
-// <user-defined>
 template <typename meta_t>
 struct param_t {
    using vertex_t = typename meta_t::vertex_type;
@@ -28,9 +27,7 @@ struct param_t {
      single_source = single_source_;
    }
 };
-// </user-defined>
 
-// <user-defined>
 template <typename meta_t>
 struct result_t {
   using vertex_t = typename meta_t::vertex_type;
@@ -47,15 +44,12 @@ struct result_t {
     predecessors = predecessors_;
   }
 };
-// </user-defined>
-
 
 template <typename graph_t, typename meta_t, typename param_t, typename result_t>
 struct problem_t : gunrock::problem_t<graph_t, meta_t, param_t, result_t> {
   // Use Base class constructor -- does this work? does it handle copy constructor?
   using gunrock::problem_t<graph_t, meta_t, param_t, result_t>::problem_t;
-    
-  // <user-defined>
+  
   using vertex_t = typename meta_t::vertex_type;
   using edge_t   = typename meta_t::edge_type;
   using weight_t = typename meta_t::weight_type;
@@ -83,7 +77,6 @@ struct problem_t : gunrock::problem_t<graph_t, meta_t, param_t, result_t> {
     visited.resize(n_vertices);
     thrust::fill(thrust::device, visited.begin(), visited.end(), -1);
   }
-  // </user-defined>
 };
 
 template <typename problem_t>
@@ -148,7 +141,6 @@ struct enactor_t : gunrock::enactor_t<problem_t> {
     operators::filter::execute<operators::filter_type_t::uniquify>(
         G, this->get_enactor(), remove_completed_paths, context);
   }
-  // </user-defined>
 
 };  // struct enactor_t
 
@@ -161,7 +153,6 @@ auto get_default_context() {
   return std::shared_ptr<cuda::multi_context_t>(
       new cuda::multi_context_t(devices));
 }
-
 
 template <
   typename graph_vector_t,
