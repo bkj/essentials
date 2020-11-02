@@ -20,12 +20,14 @@ namespace sssp {
 
 template <typename meta_t>
 struct param_t {
-   using vertex_t = typename meta_t::vertex_type;
+  using vertex_t = typename meta_t::vertex_type;
    
-   vertex_t single_source;
-   param_t(vertex_t single_source_) {
-     single_source = single_source_;
-   }
+  vertex_t single_source;
+  param_t(
+    vertex_t single_source_
+  ) :
+    single_source(single_source_) 
+  {}
 };
 
 template <typename meta_t>
@@ -39,10 +41,10 @@ struct result_t {
   result_t(
     weight_t* distances_,
     vertex_t* predecessors_
-  ) {
-    distances    = distances_;
-    predecessors = predecessors_;
-  }
+  ) :
+    distances(distances_), 
+    predecessors(predecessors_) 
+  {}
 };
 
 template <typename graph_t, typename meta_t, typename param_t, typename result_t>
@@ -55,7 +57,13 @@ struct problem_t : gunrock::problem_t<graph_t, meta_t, param_t, result_t> {
   using weight_t = typename meta_t::weight_type;
   
   thrust::device_vector<vertex_t> visited;
-
+  
+  void init() {
+    auto n_vertices = this->get_meta_pointer()->get_number_of_vertices();
+    visited.resize(n_vertices);
+    thrust::fill(thrust::device, visited.begin(), visited.end(), -1);
+  }
+  
   void reset() {
     auto n_vertices = this->get_meta_pointer()->get_number_of_vertices();
     
@@ -74,8 +82,7 @@ struct problem_t : gunrock::problem_t<graph_t, meta_t, param_t, result_t> {
       0
     );
     
-    visited.resize(n_vertices);
-    thrust::fill(thrust::device, visited.begin(), visited.end(), -1);
+    thrust::fill(thrust::device, visited.begin(), visited.end(), -1); // This does need to be reset in between runs though
   }
 };
 
@@ -186,6 +193,7 @@ float run(
       &result,           // output results
       multi_context      // input context
   );
+  problem.init();
   problem.reset();
 
   enactor_type enactor(&problem, multi_context);

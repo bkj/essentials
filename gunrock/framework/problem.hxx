@@ -38,15 +38,20 @@ struct problem_t {
 
   graph_t* get_graph_pointer() const { return graph_slice; }
   meta_t* get_meta_pointer() const { return meta_slice; }
-  // void reset() {};
-  
+    
   problem_t() : graph_slice(nullptr) {}
-  problem_t(graph_t* G,
-            meta_t* meta,
-            param_t* param_,
-            result_t* result_,
-            std::shared_ptr<cuda::multi_context_t> _context)
-      : graph_slice(G), meta_slice(meta), context(_context), param(param_), result(result_) {}
+  problem_t(
+    graph_t* G,
+    meta_t* meta,
+    param_t* param_,
+    result_t* result_,
+    std::shared_ptr<cuda::multi_context_t> _context
+  ) : 
+    graph_slice(G),
+    meta_slice(meta),  
+    param(param_), 
+    result(result_),
+    context(_context) { }
 
   // Disable copy ctor and assignment operator.
   // We do not want to let user copy only a slice.
