@@ -20,31 +20,29 @@ namespace sssp {
 template <typename meta_t>
 struct sssp_param_t {
    using vertex_t = typename meta_t::vertex_type;
-   
+
    vertex_t single_source;
-   
+
    sssp_param_t(
      vertex_t single_source_
-   ) {
-     single_source = single_source_;
-   }
+   ) :
+    single_source(single_source_) {}
 };
 
 template <typename meta_t>
 struct sssp_result_t {
   using vertex_t = typename meta_t::vertex_type;
   using weight_t = typename meta_t::weight_type;
-   
+
   weight_t* distances;
   vertex_t* predecessors;
-  
+
   sssp_result_t(
     weight_t* distances_,
     vertex_t* predecessors_
-  ) {
-    distances    = distances_;
-    predecessors = predecessors_;
-  }
+  ) :
+    distances(distances_),
+    predecessors(predecessors_) {}
 };
 
 
@@ -61,22 +59,24 @@ struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
   vertex_t single_source;
   weight_t* distances;
   vertex_t* predecessors;
-  
+
   thrust::device_vector<vertex_t> visited;
 
   sssp_problem_t(d_graph_t* d_G,
                  meta_t* meta,
                  std::shared_ptr<cuda::multi_context_t> context,
                  param_t& param,
-                 result_t& result)
-      : problem_t<d_graph_t, meta_t>(d_G, meta, context) {
-    
-    single_source = param.single_source;
-    distances     = result.distances;
-    predecessors  = result.predecessors;
-    
+                 result_t& result) :
+      problem_t<d_graph_t, meta_t>(d_G, meta, context),
+      single_source(param.single_source),
+      distances(result.distances),
+      predecessors(result.predecessors),
+      visited(meta[0].get_number_of_vertices(), -1)
+   {
+
+
     auto n_vertices = meta[0].get_number_of_vertices();
-    
+
     auto d_distances = thrust::device_pointer_cast(distances);
     thrust::fill(
       thrust::device,
@@ -85,9 +85,6 @@ struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
       std::numeric_limits<weight_t>::max()
     );
     thrust::fill(thrust::device, d_distances + single_source, d_distances + single_source + 1, 0);
-    
-    visited.resize(n_vertices);
-    thrust::fill(thrust::device, visited.begin(), visited.end(), -1);
   }
 
   sssp_problem_t(const sssp_problem_t& rhs) = delete;            // Boilerplate? Can remove?
@@ -97,7 +94,7 @@ struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
 template <typename problem_t>
 struct sssp_enactor_t : enactor_t<problem_t> {
   using enactor_type = enactor_t<problem_t>;
-  
+
   using vertex_t = typename problem_t::vertex_t;
   using edge_t   = typename problem_t::edge_t;
   using weight_t = typename problem_t::weight_t;
@@ -128,11 +125,11 @@ struct sssp_enactor_t : enactor_t<problem_t> {
     // Data slice
     auto P = enactor_type::get_problem_pointer();
     auto G = P->get_graph_pointer();
-    
+
     auto distances     = P->distances;
     auto single_source = P->single_source;
     auto visited       = P->visited.data().get();
-    
+
     auto iteration = enactor_type::iteration;
 
     /**
