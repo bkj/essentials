@@ -110,10 +110,10 @@ struct color_enactor_t : enactor_t<algorithm_problem_t> {
 
       // Main loop that goes over all the neighbors and finds the maximum or
       // minimum random number vertex.
-      for (edge_t e = start_edge; e < start_edge + num_neighbors; e++) {
+      for (edge_t e = start_edge; e < start_edge + num_neighbors; ++e) {
         vertex_t u = G->get_destination_vertex(e);
 
-        if ((colors[u] == std::numeric_limits<vertex_t>::max()) &&
+        if ((colors[u] != std::numeric_limits<vertex_t>::max()) &&
                 (colors[u] != color + 1) && (colors[u] != color + 2) ||
             (vertex == u))
           continue;
@@ -137,8 +137,8 @@ struct color_enactor_t : enactor_t<algorithm_problem_t> {
     };
 
     // Execute filter operator on the provided lambda.
-    operators::filter::execute<operators::filter_type_t::predicated>(
-        G, E, color_me_in);
+    operators::filter::execute<operators::filter_type_t::uniquify>(
+        G, E, color_me_in, context);
   }
 
   /**
