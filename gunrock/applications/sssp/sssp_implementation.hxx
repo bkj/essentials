@@ -63,7 +63,7 @@ struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
   thrust::device_vector<vertex_t> visited;
 
   sssp_problem_t(d_graph_t* d_G,
-                 meta_t* meta,
+                 meta_t& meta,
                  std::shared_ptr<cuda::multi_context_t> context,
                  param_t& param,
                  result_t& result) :
@@ -71,17 +71,14 @@ struct sssp_problem_t : problem_t<d_graph_t, meta_t> {
       single_source(param.single_source),
       distances(result.distances),
       predecessors(result.predecessors),
-      visited(meta[0].get_number_of_vertices(), -1)
+      visited(meta.get_number_of_vertices(), -1)
    {
-
-
-    auto n_vertices = meta[0].get_number_of_vertices();
 
     auto d_distances = thrust::device_pointer_cast(distances);
     thrust::fill(
       thrust::device,
       d_distances + 0,
-      d_distances + n_vertices,
+      d_distances + meta.get_number_of_vertices(),
       std::numeric_limits<weight_t>::max()
     );
     thrust::fill(thrust::device, d_distances + single_source, d_distances + single_source + 1, 0);

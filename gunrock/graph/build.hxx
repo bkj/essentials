@@ -119,19 +119,9 @@ auto from_csr_t(typename vertex_vector_t::value_type const& r,
   }
   
   // Meta
-  constexpr memory_space_t h_space = memory_space_t::host;
-
-  using meta_type = graph::graph_t<
-      h_space, vertex_type, edge_type, weight_type,
-      graph::graph_csr_t<h_space, vertex_type, edge_type, weight_type>>;
-
-  typename vector<meta_type, h_space>::type P(1);
-  meta_type M;
-
-  M.set(r, c, nnz, nullptr, nullptr, nullptr);
-  host::csr_t<meta_type>(M, memory::raw_pointer_cast(P.data()));
+  graph_meta_t<vertex_type, edge_type, weight_type> meta(r, nnz);
   
-  return std::make_pair(O, P);
+  return std::make_pair(O, meta);
 }
 
 template <memory_space_t space, typename csr_t>

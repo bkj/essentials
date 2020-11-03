@@ -38,7 +38,7 @@ float run(graph_vector_t& G,
   std::shared_ptr<problem_t> problem(
     std::make_shared<problem_t>(
       G.data().get(),    // input graph (GPU)
-      meta.data(),       // metadata    (CPU)
+      meta,              // metadata    (CPU)
       multi_context,     // input context
       param,             // input parameters
       result));          // output results

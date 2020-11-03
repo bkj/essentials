@@ -42,9 +42,9 @@ struct problem_t {
 
   problem_t() : graph_slice(nullptr) {}
   problem_t(graph_type* G,
-            host_graph_type* g,
+            host_graph_type& meta,
             std::shared_ptr<cuda::multi_context_t> _context)
-      : graph_slice(G), host_graph_slice(g), context(_context) {}
+      : graph_slice(G), host_graph_slice(&meta), context(_context) {}
 
   // Disable copy ctor and assignment operator.
   // We do not want to let user copy only a slice.

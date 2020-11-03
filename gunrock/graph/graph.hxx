@@ -26,6 +26,29 @@ using namespace format;
 using namespace detail;
 using namespace memory;
 
+template <typename vertex_t, typename edge_t, typename weight_t>
+struct graph_meta_t {
+  using vertex_type = vertex_t;
+  using edge_type   = edge_t;
+  using weight_type = weight_t;
+  
+  vertex_t n_vertices;
+  edge_t n_edges;
+  
+  vertex_t get_number_of_vertices() {
+    return n_vertices;
+  }
+
+  vertex_t get_number_of_edges() {
+    return n_edges;
+  }
+  
+  graph_meta_t(
+    vertex_t n_vertices_,
+    edge_t n_edges_
+  ) : n_vertices(n_vertices_), n_edges(n_edges_) {}
+};
+
 /**
  * @brief Variadic inheritence based graph class, inherit only what you need
  * from the formats implemented. See detail/base.hxx for the graph_base_t
