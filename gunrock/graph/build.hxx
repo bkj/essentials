@@ -93,8 +93,6 @@ auto from_csr_t(vertex_type const& r,
                 edge_type* Ap_ptr,
                 vertex_type* Aj_ptr,
                 weight_type* Ax_ptr) {
-
-  // memory::raw_pointer_cast
   
   using graph_type = graph::graph_t<
       space, vertex_type, edge_type, weight_type,
