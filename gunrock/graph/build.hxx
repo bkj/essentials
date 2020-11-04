@@ -84,24 +84,17 @@ void csr_t(graph_type I, graph_type* G) {
 }  // namespace host
 
 template <memory_space_t space,
-          typename edge_vector_t,
-          typename vertex_vector_t,
-          typename weight_vector_t>
-auto from_csr_t(typename vertex_vector_t::value_type const& r,
-                typename vertex_vector_t::value_type const& c,
-                typename edge_vector_t::value_type const& nnz,
-                edge_vector_t& Ap,
-                vertex_vector_t& Aj,
-                weight_vector_t& Ax) {
+          typename edge_type,
+          typename vertex_type,
+          typename weight_type>
+auto from_csr_t(vertex_type const& r,
+                vertex_type const& c,
+                edge_type const& nnz,
+                edge_type* Ap_ptr,
+                vertex_type* Aj_ptr,
+                weight_type* Ax_ptr) {
+  // From raw pointers
   
-  using vertex_type = typename vertex_vector_t::value_type;
-  using edge_type   = typename edge_vector_t::value_type;
-  using weight_type = typename weight_vector_t::value_type;
-
-  auto Ap_ptr = memory::raw_pointer_cast(Ap.data());
-  auto Aj_ptr = memory::raw_pointer_cast(Aj.data());
-  auto Ax_ptr = memory::raw_pointer_cast(Ax.data());
-
   // Graph
   using graph_type = graph::graph_t<
       space, vertex_type, edge_type, weight_type,
@@ -134,15 +127,36 @@ auto from_csr_t(typename vertex_vector_t::value_type const& r,
   return std::make_pair(O, P);
 }
 
+template <memory_space_t space,
+          typename edge_vector_t,
+          typename vertex_vector_t,
+          typename weight_vector_t>
+auto from_csr_t(typename vertex_vector_t::value_type const& r,
+                typename vertex_vector_t::value_type const& c,
+                typename edge_vector_t::value_type const& nnz,
+                edge_vector_t& Ap,
+                vertex_vector_t& Aj,
+                weight_vector_t& Ax) {
+  // From thrust vectors
+  return from_csr_t<space>(
+    r, c, nnz,
+    memory::raw_pointer_cast(Ap.data()),
+    memory::raw_pointer_cast(Aj.data()),
+    memory::raw_pointer_cast(Ax.data())
+  );
+}
+
 template <memory_space_t space, typename csr_t>
 auto from_csr_t(csr_t* csr) {
+  // From a CSR object
   return from_csr_t<space>(
       csr->number_of_rows,      // number of rows
       csr->number_of_columns,   // number of columns
       csr->number_of_nonzeros,  // number of edges
       csr->row_offsets,         // row offsets
       csr->column_indices,      // column indices
-      csr->nonzero_values);  
+      csr->nonzero_values
+  );  
 }
 
 }  // namespace build
