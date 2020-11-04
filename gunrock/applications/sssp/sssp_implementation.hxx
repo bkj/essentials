@@ -98,14 +98,10 @@ struct enactor_t : gunrock::enactor_t<problem_t> {
   void prepare_frontier(cuda::standard_context_t* context) override {
     auto P = this->get_problem_pointer();
     auto f = this->get_active_frontier_buffer();
-    
-    printf("P->param->single_source %d \n", P->param->single_source);
     f->push_back(P->param->single_source);
   }
 
   void loop(cuda::standard_context_t* context) override {
-    printf("loop\n");
-    // Data slice
     auto E = this->get_enactor();
     auto P = this->get_problem_pointer();
     auto G = P->get_graph_pointer();
