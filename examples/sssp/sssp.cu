@@ -31,7 +31,19 @@ void test_sssp(int num_arguments, char** argument_array) {
   // --
   // Build graph + metadata
   
-  auto [G, meta] = graph::build::from_csr_t<memory_space_t::device>(&csr);
+  auto G = graph::build::from_csr_t<memory_space_t::device>(
+    csr.number_of_rows,
+    csr.number_of_columns, 
+    csr.number_of_nonzeros,
+    csr.row_offsets.data().get(),
+    csr.column_indices.data().get(),
+    csr.nonzero_values.data().get()
+  );
+  auto meta = graph::build::meta_t<vertex_t, edge_t, weight_t>(
+    csr.number_of_rows,
+    csr.number_of_columns,
+    csr.number_of_nonzeros
+  );
   
   // --
   // Params and memory allocation
@@ -50,7 +62,7 @@ void test_sssp(int num_arguments, char** argument_array) {
     meta,
     single_source,
     distances.data().get(),
-    predecessors.data().get()    
+    predecessors.data().get()
   );
   
   // --
