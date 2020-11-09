@@ -105,7 +105,7 @@ struct enactor_t {
    */
   float enact() {
     auto single_context = context->get_context(0);
-    single_context->print_properties();
+    // single_context->print_properties();
     prepare_frontier(single_context);
     auto timer = single_context->timer();
     timer.begin();
