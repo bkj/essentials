@@ -20,31 +20,30 @@ namespace sssp {
 
 template <typename meta_t>
 struct param_t {
-  using vertex_t = typename meta_t::vertex_type;
-   
-  vertex_t single_source;
-  param_t(
-    vertex_t single_source_
-  ) :
-    single_source(single_source_) 
-  {}
+   using vertex_t = typename meta_t::vertex_type;
+
+   vertex_t single_source;
+
+   param_t(
+     vertex_t single_source_
+   ) :
+    single_source(single_source_) {}
 };
 
 template <typename meta_t>
 struct result_t {
   using vertex_t = typename meta_t::vertex_type;
   using weight_t = typename meta_t::weight_type;
-   
+
   weight_t* distances;
   vertex_t* predecessors;
-  
+
   result_t(
     weight_t* distances_,
     vertex_t* predecessors_
   ) :
-    distances(distances_), 
-    predecessors(predecessors_) 
-  {}
+    distances(distances_),
+    predecessors(predecessors_) {}
 };
 
 template <typename graph_t, typename meta_t, typename param_t, typename result_t>

@@ -132,16 +132,37 @@ auto meta_t(vertex_type const& r,
   return P;
 }
 
-// template <memory_space_t space, typename csr_t>
-// auto from_csr_t(csr_t* csr) {
-//   return from_csr_t<space>(
-//       csr->number_of_rows,      // number of rows
-//       csr->number_of_columns,   // number of columns
-//       csr->number_of_nonzeros,  // number of edges
-//       csr->row_offsets,         // row offsets
-//       csr->column_indices,      // column indices
-//       csr->nonzero_values);  
-// }
+template <memory_space_t space,
+          typename edge_vector_t,
+          typename vertex_vector_t,
+          typename weight_vector_t>
+auto from_csr_t(typename vertex_vector_t::value_type const& r,
+                typename vertex_vector_t::value_type const& c,
+                typename edge_vector_t::value_type const& nnz,
+                edge_vector_t& Ap,
+                vertex_vector_t& Aj,
+                weight_vector_t& Ax) {
+  // From thrust vectors
+  return from_csr_t<space>(
+    r, c, nnz,
+    memory::raw_pointer_cast(Ap.data()),
+    memory::raw_pointer_cast(Aj.data()),
+    memory::raw_pointer_cast(Ax.data())
+  );
+}
+
+template <memory_space_t space, typename csr_t>
+auto from_csr_t(csr_t* csr) {
+  // From a CSR object
+  return from_csr_t<space>(
+      csr->number_of_rows,      // number of rows
+      csr->number_of_columns,   // number of columns
+      csr->number_of_nonzeros,  // number of edges
+      csr->row_offsets,         // row offsets
+      csr->column_indices,      // column indices
+      csr->nonzero_values
+  );  
+}
 
 }  // namespace build
 }  // namespace graph
