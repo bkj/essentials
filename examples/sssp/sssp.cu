@@ -38,7 +38,7 @@ void test_sssp(int num_arguments, char** argument_array) {
   
   vertex_t single_source = 0;
   
-  vertex_t n_vertices = meta[0].get_number_of_vertices();
+  vertex_t n_vertices = meta->get_number_of_vertices();
   thrust::device_vector<weight_t> distances(n_vertices);
   thrust::device_vector<vertex_t> predecessors(n_vertices);
   
