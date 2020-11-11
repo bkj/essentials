@@ -101,9 +101,9 @@ auto _from_csr_t(vertex_type const& r,
   graph_type G;
   G.set(r, c, nnz, Ap_ptr, Aj_ptr, Ax_ptr);
 
-  auto graph_deleter = [&](graph_type* ptr) { memory::free(ptr, space); };
+  auto deleter = [&](graph_type* ptr) { memory::free(ptr, space); };
   std::shared_ptr<graph_type> G_ptr(
-      memory::allocate<graph_type>(sizeof(graph_type), space), graph_deleter);
+      memory::allocate<graph_type>(sizeof(graph_type), space), deleter);
 
   if (space == memory_space_t::device) {
     device::csr_t<graph_type>(G, G_ptr.get());
