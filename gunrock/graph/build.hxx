@@ -87,7 +87,7 @@ template <memory_space_t space,
           typename edge_type,
           typename vertex_type,
           typename weight_type>
-auto from_csr_t(vertex_type const& r,
+auto _from_csr_t(vertex_type const& r,
                 vertex_type const& c,
                 edge_type const& nnz,
                 edge_type* Ap_ptr,
@@ -98,38 +98,37 @@ auto from_csr_t(vertex_type const& r,
       space, vertex_type, edge_type, weight_type,
       graph::graph_csr_t<space, vertex_type, edge_type, weight_type>>;
 
-  typename vector<graph_type, space>::type O(1);
   graph_type G;
-
   G.set(r, c, nnz, Ap_ptr, Aj_ptr, Ax_ptr);
 
+  auto graph_deleter = [&](graph_type* ptr) { memory::free(ptr, space); };
+  std::shared_ptr<graph_type> G_ptr(
+      memory::allocate<graph_type>(sizeof(graph_type), space), graph_deleter);
+
   if (space == memory_space_t::device) {
-    device::csr_t<graph_type>(G, memory::raw_pointer_cast(O.data()));
+    device::csr_t<graph_type>(G, G_ptr.get());
   } else {
-    host::csr_t<graph_type>(G, memory::raw_pointer_cast(O.data()));
+    host::csr_t<graph_type>(G, G_ptr.get());
   }
   
-  return O;
+  return G_ptr;
 }
-
-template <typename vertex_type, typename edge_type, typename weight_type>
-auto meta_t(vertex_type const& r,
-            vertex_type const& c,
-            edge_type const& nnz) {
-
-  constexpr memory_space_t h_space = memory_space_t::host;
-
-  using meta_type = graph::graph_t<
-      h_space, vertex_type, edge_type, weight_type,
-      graph::graph_csr_t<h_space, vertex_type, edge_type, weight_type>>;
-
-  typename vector<meta_type, h_space>::type P(1);
-  meta_type M;
-
-  M.set(r, c, nnz, nullptr, nullptr, nullptr);
-  host::csr_t<meta_type>(M, memory::raw_pointer_cast(P.data()));
+                
+template <memory_space_t space,
+          typename edge_type,
+          typename vertex_type,
+          typename weight_type>
+auto from_csr_t(vertex_type const& r,
+                vertex_type const& c,
+                edge_type const& nnz,
+                edge_type* Ap_ptr,
+                vertex_type* Aj_ptr,
+                weight_type* Ax_ptr) {
   
-  return P;
+  // From raw pointers
+  auto G_ptr    = _from_csr_t<space>(r, c, nnz, Ap_ptr, Aj_ptr, Ax_ptr);
+  auto meta_ptr = _from_csr_t<memory_space_t::host, edge_type, vertex_type, weight_type>(r, c, nnz, nullptr, nullptr, nullptr);
+  return std::make_pair(G_ptr, meta_ptr);
 }
 
 template <memory_space_t space,
@@ -155,11 +154,11 @@ template <memory_space_t space, typename csr_t>
 auto from_csr_t(csr_t* csr) {
   // From a CSR object
   return from_csr_t<space>(
-      csr->number_of_rows,      // number of rows
-      csr->number_of_columns,   // number of columns
-      csr->number_of_nonzeros,  // number of edges
-      csr->row_offsets,         // row offsets
-      csr->column_indices,      // column indices
+      csr->number_of_rows,
+      csr->number_of_columns,
+      csr->number_of_nonzeros,
+      csr->row_offsets,
+      csr->column_indices,
       csr->nonzero_values
   );  
 }

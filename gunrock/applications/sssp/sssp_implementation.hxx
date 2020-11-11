@@ -160,14 +160,10 @@ auto get_default_context() {
       new cuda::multi_context_t(devices));
 }
 
-template <
-  typename graph_vector_t,
-  typename meta_vector_t,
-  typename graph_t = typename graph_vector_t::value_type,
-  typename meta_t  = typename meta_vector_t::value_type>
+template <typename graph_t, typename meta_t>
 float run(
-  graph_vector_t& G,
-  meta_vector_t& meta,
+  std::shared_ptr<graph_t>& G,
+  std::shared_ptr<meta_t>& meta,
   typename meta_t::vertex_type& single_source, // Parameter
   typename meta_t::weight_type* distances,     // Output
   typename meta_t::vertex_type* predecessors   // Output
@@ -184,11 +180,11 @@ float run(
   using enactor_type = enactor_t<problem_type>;
   
   problem_type problem(
-      G.data().get(),    // input graph (GPU)
-      meta.data(),       // metadata    (CPU)
-      &param,            // input parameters
-      &result,           // output results
-      multi_context      // input context
+      G.get(),
+      meta.get(),
+      &param,   
+      &result,
+      multi_context
   );
   problem.init();
   problem.reset();
