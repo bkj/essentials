@@ -126,7 +126,7 @@ struct enactor_t : gunrock::enactor_t<problem_t> {
       return (distance_to_neighbor < recover_distance);
     };
 
-    auto remove_completed_paths = [visited, iteration] __host__ __device__(vertex_t const& vertex) -> bool {
+    auto remove_completed_paths = [G, visited, iteration] __host__ __device__(vertex_t const& vertex) -> bool {
       if (vertex == std::numeric_limits<vertex_t>::max())
         return false;
         
@@ -134,7 +134,9 @@ struct enactor_t : gunrock::enactor_t<problem_t> {
         return false;
         
       visited[vertex] = iteration;
-      return true;
+      
+      // return true;
+      return G->get_number_of_neighbors(vertex) > 0;
     };
 
     // Execute advance operator on the provided lambda
