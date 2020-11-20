@@ -1,6 +1,6 @@
 #include <cstdlib>  // EXIT_SUCCESS
 
-#include <gunrock/applications/sssp/sssp_implementation.hxx>
+#include <gunrock/applications/sssp.hxx>
 
 using namespace gunrock;
 using namespace memory;

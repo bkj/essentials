@@ -25,9 +25,9 @@ struct param_t {
    vertex_t single_source;
 
    param_t(
-     vertex_t single_source_
+     vertex_t _single_source
    ) :
-    single_source(single_source_) {}
+    single_source(_single_source) {}
 };
 
 template <typename meta_t>
@@ -39,11 +39,11 @@ struct result_t {
   vertex_t* predecessors;
 
   result_t(
-    weight_t* distances_,
-    vertex_t* predecessors_
+    weight_t* _distances,
+    vertex_t* _predecessors
   ) :
-    distances(distances_),
-    predecessors(predecessors_) {}
+    distances(_distances),
+    predecessors(_predecessors) {}
 };
 
 template <typename graph_t, typename meta_t, typename param_t, typename result_t>

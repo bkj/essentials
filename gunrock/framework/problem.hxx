@@ -43,14 +43,14 @@ struct problem_t {
   problem_t(
     graph_t* G,
     meta_t* meta,
-    param_t* param_,
-    result_t* result_,
+    param_t* _param,
+    result_t* _result,
     std::shared_ptr<cuda::multi_context_t> _context
   ) : 
     graph_slice(G),
-    meta_slice(meta),  
-    param(param_), 
-    result(result_),
+    meta_slice(meta),
+    param(_param), 
+    result(_result),
     context(_context) { }
 
   // Disable copy ctor and assignment operator.

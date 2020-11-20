@@ -1,7 +1,7 @@
 #include <cstdlib>  // EXIT_SUCCESS
 #include <set>
 
-#include <gunrock/applications/color/color_implementation.hxx>
+#include <gunrock/applications/color.hxx>
 
 using namespace gunrock;
 using namespace memory;
