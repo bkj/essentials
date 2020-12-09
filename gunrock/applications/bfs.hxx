@@ -16,14 +16,18 @@
 namespace gunrock {
 namespace bfs {
 
-template <typename vertex_t>
+template <typename graph_t>
 struct param_t {
+  using vertex_t = typename graph_t::vertex_type;
+  
   vertex_t single_source;
   param_t(vertex_t _single_source) : single_source(_single_source) {}
 };
 
-template <typename vertex_t>
+template <typename graph_t>
 struct result_t {
+  using vertex_t = typename graph_t::vertex_type;
+  
   vertex_t* distances;
   vertex_t* predecessors;
   result_t(vertex_t* _distances, vertex_t* _predecessors)
@@ -31,25 +35,14 @@ struct result_t {
 };
 
 template <typename graph_t, typename param_type, typename result_type>
-struct problem_t : gunrock::problem_t<graph_t> {
-  param_type param;
-  result_type result;
-
-  problem_t(graph_t& G,
-            param_type& _param,
-            result_type& _result,
-            std::shared_ptr<cuda::multi_context_t> _context)
-      : gunrock::problem_t<graph_t>(G, _context),
-        param(_param),
-        result(_result) {}
+struct problem_t : gunrock::problem_t<graph_t, param_type, result_type> {
+  using gunrock::problem_t<graph_t, param_type, result_type>::problem_t;
 
   using vertex_t = typename graph_t::vertex_type;
   using edge_t = typename graph_t::edge_type;
   using weight_t = typename graph_t::weight_type;
 
   thrust::device_vector<vertex_t> visited;
-
-  void init() {}
 
   void reset() {
     auto n_vertices = this->get_graph().get_number_of_vertices();
@@ -128,15 +121,16 @@ float run(graph_t& G,
 ) {
   using vertex_t = typename graph_t::vertex_type;
   // <user-defined>
-  param_t<vertex_t> param(single_source);
-  result_t<vertex_t> result(distances, predecessors);
+  param_t<graph_t> param(single_source);
+  result_t<graph_t> result(distances, predecessors);
   // </user-defined>
 
+  // <boiler-plate>
   auto multi_context =
       std::shared_ptr<cuda::multi_context_t>(new cuda::multi_context_t(0));
 
   using problem_type =
-      problem_t<graph_t, param_t<vertex_t>, result_t<vertex_t>>;
+      problem_t<graph_t, param_t<graph_t>, result_t<graph_t>>;
   using enactor_type = enactor_t<problem_type>;
 
   problem_type problem(G, param, result, multi_context);
