@@ -36,17 +36,8 @@ struct result_t {
 };
 
 template <typename graph_t, typename param_type, typename result_type>
-struct problem_t : gunrock::problem_t<graph_t> {
-  param_type param;
-  result_type result;
-
-  problem_t(graph_t& G,
-            param_type& _param,
-            result_type& _result,
-            std::shared_ptr<cuda::multi_context_t> _context)
-      : gunrock::problem_t<graph_t>(G, _context),
-        param(_param),
-        result(_result) {}
+struct problem_t : gunrock::problem_t<graph_t, param_type, result_type> {
+  using gunrock::problem_t<graph_t, param_type, result_type>::problem_t;
 
   using vertex_t = typename graph_t::vertex_type;
   using edge_t = typename graph_t::edge_type;
@@ -79,8 +70,6 @@ struct problem_t : gunrock::problem_t<graph_t> {
 
 template <typename problem_t>
 struct enactor_t : gunrock::enactor_t<problem_t> {
-  // Use Base class constructor -- does this work? does it handle copy
-  // constructor?
   using gunrock::enactor_t<problem_t>::enactor_t;
 
   using vertex_t = typename problem_t::vertex_t;

@@ -22,13 +22,15 @@ namespace gunrock {
  *
  * @tparam graph_t
  */
-template <typename graph_t>
+template <typename graph_t, typename param_t, typename result_t>
 struct problem_t {
   using vertex_t = typename graph_t::vertex_type;
   using edge_t = typename graph_t::edge_type;
   using weight_t = typename graph_t::weight_type;
 
   graph_t graph_slice;
+  param_t param;
+  result_t result;
   std::shared_ptr<cuda::multi_context_t> context;
 
   auto get_graph() { return graph_slice; }
@@ -36,10 +38,13 @@ struct problem_t {
   void init() {};
   void reset() {};
   
+  problem_t(graph_t& G,
+            param_t& _param,
+            result_t& _result,
+            std::shared_ptr<cuda::multi_context_t> _context)
+      : graph_slice(G), context(_context), param(_param), result(_result) {}
+      
   problem_t() : graph_slice(nullptr) {}
-
-  problem_t(graph_t& G, std::shared_ptr<cuda::multi_context_t> _context)
-      : graph_slice(G), context(_context) {}
 
   // Disable copy ctor and assignment operator.
   // We do not want to let user copy only a slice.
