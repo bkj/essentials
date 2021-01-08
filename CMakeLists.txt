@@ -18,15 +18,14 @@ set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -O3")
 set(CUDA_NVCC_FLAGS "${CUDA_NVCC_FLAGS} -DSM_TARGET=61") # ?? Should this be auto-detected?
 
 set(ESSENTIALS_INCLUDE_DIR /home/ubuntu/projects/essentials CACHE STRING "Path to `gunrock/essentials` includes") # cafda937b683466484d0a6f0c3b721321cc98f59
-cuda_add_library(essentials SHARED "${ESSENTIALS_INCLUDE_DIR}/externals/mtx/mmio.cpp")
+cuda_add_library(essentials SHARED "externals/mtx/mmio.cpp")
 
 target_include_directories(
   essentials
   PRIVATE
-  "${ESSENTIALS_INCLUDE_DIR}/"
-  "${ESSENTIALS_INCLUDE_DIR}/externals/moderngpu/src"
-  "${ESSENTIALS_INCLUDE_DIR}/externals/rapidjson/include"
-  "${ESSENTIALS_INCLUDE_DIR}/externals/mtx"
+  "externals/moderngpu/src"
+  "externals/rapidjson/include"
+  "externals/mtx"
   "${TORCH_INCLUDE_DIRS}"
 )
 
