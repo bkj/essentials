@@ -86,10 +86,10 @@ struct problem_t {
 // --
 // Enactor
 
-template<typename queue_t, typename val_t>
-__global__ void _push_one(queue_t q, val_t val) {
-  if(LANE_ == 0) q.push(val);
-}
+// template<typename queue_t, typename val_t>
+// __global__ void _push_one(queue_t q, val_t val) {
+//   if(LANE_ == 0) q.push(val);
+// }
 
 template<typename queue_t, typename val_t>
 __global__ void _push_all(queue_t q, val_t n) {
