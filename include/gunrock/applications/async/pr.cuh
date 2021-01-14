@@ -8,23 +8,44 @@
 
 namespace gunrock {
 namespace async {
-namespace bfs {
+namespace pr {
 
 // <user-defined>
-template <typename vertex_t>
+template <typename weight_t>
 struct param_t {
-  vertex_t single_source;
-  param_t(vertex_t _single_source) : single_source(_single_source) {}
+  weight_t lambda;
+  weight_t epsilon;
+  param_t(weight_t _lambda, weight_t _epsilon) : lambda(_lambda), epsilon(_epsilon) {}
 };
 // </user-defined>
 
 // <user-defined>
-template <typename edge_t>
+template <typename weight_t>
 struct result_t {
-  edge_t* depth;
-  result_t(edge_t* _depth) : depth(_depth) {}
+  weight_t* rank;
+  weight_t* res;
+  result_t(weight_t* _rank, weight_t* _res) : rank(_rank), res(_res) {}
 };
 // </user-defined>
+
+template <typename graph_t, typename weight_t>
+__global__ void _reset_rank_res(graph_t G, weight_t lambda, weight_t* rank, weight_t* res) {
+    using vertex_t = typename graph_t::vertex_type;
+    const vertex_t n_vertices = G.get_number_of_vertices();
+    
+    for(uint32_t src = TID; src < n_vertices; src += blockDim.x * gridDim.x) {
+        rank[src] = 1.0 - lambda;
+        
+        const vertex_t start  = G.get_starting_edge(src);
+        const vertex_t degree = G.get_number_of_neighbors(src);
+        const weight_t update = (1.0 - lambda) * lambda / degree;
+        
+        for(uint32_t idx = 0; idx < degree; idx++) {
+            const vertex_t dst = G.get_destination_vertex(start + idx);
+            atomicAdd(res + dst, update);
+        }
+    }
+}
 
 // This is very close to compatible w/ standard Gunrock problem_t
 // However, it doesn't use the `context` argument, so not joining yet
@@ -52,13 +73,12 @@ struct problem_t {
   
   void reset() {
     // <user-defined>
-    auto g = this->get_graph();
-    auto n_vertices = g.get_number_of_vertices();
-    
-    auto single_source = param.single_source;
-    auto d_depth       = thrust::device_pointer_cast(this->result.depth);
-    thrust::fill(thrust::device, d_depth + 0, d_depth + n_vertices, n_vertices + 1);
-    thrust::fill(thrust::device, d_depth + single_source, d_depth + single_source + 1, 0);
+    _reset_rank_res<<<320, 512>>>(
+      this->get_graph(), 
+      param.lambda, 
+      this->result.rank, 
+      this->result.res
+    );
     // </user-defined>
   }
 };
@@ -68,7 +88,12 @@ struct problem_t {
 
 template<typename queue_t, typename val_t>
 __global__ void _push_one(queue_t q, val_t val) {
-    if(LANE_ == 0) q.push(val);
+  if(LANE_ == 0) q.push(val);
+}
+
+template<typename queue_t, typename val_t>
+__global__ void _push_all(queue_t q, val_t n) {
+   for(val_t i = TID; i < n; i += blockDim.x * gridDim.x) q.push(i);
 }
 
 // This is very close to compatible w/ standard Gunrock enactor_t
@@ -86,7 +111,7 @@ struct enactor_t {
     int numBlock  = 56 * 5;
     int numThread = 256;
 
-    // <boiler-plate>
+    // <boiler-plate<<<320, 512>>>>
     enactor_t(
       problem_t* _problem,
       uint32_t  min_iter=800, 
@@ -108,7 +133,7 @@ struct enactor_t {
 
     // <user-defined>
     void prepare_frontier() {
-      _push_one<<<1, 32>>>(q, problem->param.single_source);
+      _push_all<<<numBlock, numThread>>>(q, problem->get_graph().get_number_of_vertices());
     }
     // </user-defined>
     
@@ -119,22 +144,31 @@ struct enactor_t {
       // </boiler-plate>
       
       // <user-defined>
-      auto G        = problem->get_graph();
-      edge_t* depth = problem->result.depth;
-      
-      auto kernel = [G, depth] __device__ (vertex_t node, queue_t q) -> void {
+      auto G           = problem->get_graph();
+      weight_t lambda  = problem->param.lambda;
+      weight_t epsilon = problem->param.epsilon;
+      weight_t* rank   = problem->result.rank;
+      weight_t* res    = problem->result.res;
+
+      auto kernel = [G, lambda, epsilon, rank, res] __device__ (vertex_t node, queue_t q) -> void {
+          // Yuxin's implementation had some kind of pre-fetching?
+          // https://github.com/bkj/async-queue-paper/blob/cta/pr/pr.cuh#L213
+          // Removing for simplicity -- I don't think it should change results
           
-          vertex_t d = ((volatile vertex_t * )depth)[node];
+          weight_t res_owner         = atomicExch(res + node, 0.0);
+          const vertex_t node_offset = G.get_starting_edge(node);
+          const vertex_t degree      = G.get_number_of_neighbors(node);
           
-          const vertex_t start  = G.get_starting_edge(node);
-          const vertex_t degree = G.get_number_of_neighbors(node);
-          
-          for(int idx = 0; idx < degree; idx++) {
-              vertex_t neib  = G.get_destination_vertex(start + idx);
-              vertex_t old_d = atomicMin(depth + neib, d + 1);
-              if(old_d > d + 1) {
-                  q.push(neib);
-              }
+          if(res_owner > 0) {
+            atomicAdd(rank + node, res_owner);
+            res_owner *= lambda / degree;
+            
+            for(vertex_t idx = 0; idx < degree; idx++) {
+              const vertex_t neib     = G.get_destination_vertex(node_offset + idx);
+              const weight_t old_rank = atomicAdd(res + neib, res_owner);
+              if(old_rank <= epsilon && old_rank + res_owner >= epsilon)
+                q.push(neib);
+            }
           }
       };
       // </user-defined>
@@ -148,19 +182,20 @@ struct enactor_t {
 
 template <typename graph_type>
 float run(graph_type& G,
-          typename graph_type::vertex_type& single_source,  // Parameter
-          typename graph_type::edge_type* depth           // Output
+          typename graph_type::weight_type& lambda,
+          typename graph_type::weight_type& epsilon,
+          typename graph_type::weight_type* rank,
+          typename graph_type::weight_type* res
 ) {
   
   // <user-defined>
-  using vertex_t = typename graph_type::vertex_type;
-  using edge_t   = typename graph_type::edge_type;
+  using weight_t = typename graph_type::weight_type;
 
-  using param_type   = param_t<vertex_t>;
-  using result_type  = result_t<edge_t>;
+  using param_type   = param_t<weight_t>;
+  using result_type  = result_t<weight_t>;
   
-  param_type param(single_source);
-  result_type result(depth);
+  param_type param(lambda, epsilon);
+  result_type result(rank, res);
   // </user-defined>
   
   // <boiler-plate>

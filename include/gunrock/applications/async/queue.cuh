@@ -241,8 +241,6 @@ struct Queues {
     }
 
     __device__ void push(T item) {
-        // printf("push | %d\n", item);
-        
         unsigned mask     = __activemask();               // 32-bit mask indicating active threads in warp
         uint32_t total    = __popc(mask);                 // Number of active threads
         unsigned int rank = __popc(mask & lanemask_lt()); // Rank of current thread
