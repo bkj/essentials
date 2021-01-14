@@ -123,7 +123,7 @@ struct enactor_t {
         
         auto capacity = min(
           single_queue_t(1 << 30), 
-          max(single_queue_t(1024),  single_queue_t(n_vertices * 1.5))
+          max(single_queue_t(1024),  single_queue_t(n_vertices*32))
         );
         
         q.init(capacity, num_queue, min_iter);
