@@ -45,23 +45,26 @@ void test_read_binary(int num_arguments, char** argument_array) {
   // --
   // Log
   
-  std::cout << "----------------" << std::endl;
-  
-  thrust::copy(csr0.row_offsets.begin(), csr0.row_offsets.end(), std::ostream_iterator<edge_t>(std::cout, " "));
-  std::cout << std::endl;
-  std::cout << "-" << std::endl;
-  thrust::copy(csr1.row_offsets.begin(), csr1.row_offsets.end(), std::ostream_iterator<edge_t>(std::cout, " "));
-  std::cout << std::endl;
+  bool verbose = false;
+  if(verbose) {
+    std::cout << "----------------" << std::endl;
+    
+    thrust::copy(csr0.row_offsets.begin(), csr0.row_offsets.end(), std::ostream_iterator<edge_t>(std::cout, " "));
+    std::cout << std::endl;
+    std::cout << "-" << std::endl;
+    thrust::copy(csr1.row_offsets.begin(), csr1.row_offsets.end(), std::ostream_iterator<edge_t>(std::cout, " "));
+    std::cout << std::endl;
 
-  std::cout << "----------------" << std::endl;
-  
-  thrust::copy(csr0.column_indices.begin(), csr0.column_indices.end(), std::ostream_iterator<vertex_t>(std::cout, " "));
-  std::cout << std::endl;
-  std::cout << "-" << std::endl;
-  thrust::copy(csr1.column_indices.begin(), csr1.column_indices.end(), std::ostream_iterator<vertex_t>(std::cout, " "));
-  std::cout << std::endl;
-  
-  std::cout << "----------------" << std::endl;
+    std::cout << "----------------" << std::endl;
+    
+    thrust::copy(csr0.column_indices.begin(), csr0.column_indices.end(), std::ostream_iterator<vertex_t>(std::cout, " "));
+    std::cout << std::endl;
+    std::cout << "-" << std::endl;
+    thrust::copy(csr1.column_indices.begin(), csr1.column_indices.end(), std::ostream_iterator<vertex_t>(std::cout, " "));
+    std::cout << std::endl;
+    
+    std::cout << "----------------" << std::endl;    
+  }
 }
 
 int main(int argc, char** argv) {
