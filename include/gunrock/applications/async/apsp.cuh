@@ -8,13 +8,21 @@
 
 namespace gunrock {
 namespace async {
-namespace sssp {
+namespace apsp {
+
+// <application-specific-user-defined>
+template<typename vertex_t>
+struct state_t {
+  vertex_t src;
+  vertex_t node;
+  
+  state_t(vertex_t _src, vertex_t _node) : src(_src), node(_node) {}
+};
+// </application-specific-user-defined>
 
 // <user-defined>
-template <typename vertex_t>
 struct param_t {
-  vertex_t single_source;
-  param_t(vertex_t _single_source) : single_source(_single_source) {}
+  param_t() {}
 };
 // </user-defined>
 
@@ -55,10 +63,10 @@ struct problem_t {
     auto g = this->get_graph();
     auto n_vertices = g.get_number_of_vertices();
     
-    auto single_source = param.single_source;
-    auto d_distances   = thrust::device_pointer_cast(this->result.distances);
-    thrust::fill(thrust::device, d_distances + 0, d_distances + n_vertices, 999999); // TODO: Replace w/ max value
-    thrust::fill(thrust::device, d_distances + single_source, d_distances + single_source + 1, 0);
+    auto d_distances = thrust::device_pointer_cast(this->result.distances);
+    thrust::fill(thrust::device, d_distances + 0, d_distances + (n_vertices * n_vertices), 99);
+    for(vertex_t i = 0; i < n_vertices; i++)
+      thrust::fill(thrust::device, d_distances + (i * n_vertices) + i, d_distances + (i * n_vertices) + i + 1, 0);
     // </user-defined>
   }
 };
@@ -71,14 +79,14 @@ __global__ void _push_one(queue_t q, val_t val) {
     if(LANE_ == 0) q.push(val);
 }
 
-// This is very close to compatible w/ standard Gunrock enactor_t
-// However, it doesn't use the `context` argument, so not joining yet
+// // This is very close to compatible w/ standard Gunrock enactor_t
+// // However, it doesn't use the `context` argument, so not joining yet
 template<typename problem_t, typename single_queue_t=uint32_t>
 struct enactor_t {
     using vertex_t = typename problem_t::vertex_t;
     using edge_t   = typename problem_t::edge_t;
     using weight_t = typename problem_t::weight_t;
-    using queue_t  = MaxCountQueue::Queues<vertex_t, single_queue_t>;
+    using queue_t  = MaxCountQueue::Queues<state_t<vertex_t>, single_queue_t>;
     
     problem_t* problem;
     queue_t q;
@@ -93,12 +101,11 @@ struct enactor_t {
       int       num_queue=4
     ) : problem(_problem) { 
         
-        
         auto n_vertices = problem->get_graph().get_number_of_vertices();
         
         auto capacity = min(
           single_queue_t(1 << 30), 
-          max(single_queue_t(1024),  single_queue_t(n_vertices * 1.5))
+          max(single_queue_t(1024), single_queue_t(n_vertices * n_vertices))
         );
         
         q.init(capacity, num_queue, min_iter);
@@ -108,7 +115,10 @@ struct enactor_t {
 
     // <user-defined>
     void prepare_frontier() {
-      _push_one<<<1, 32>>>(q, problem->param.single_source);
+      auto n_vertices = problem->get_graph().get_number_of_vertices();
+      
+      for(vertex_t i = 0; i < n_vertices; i++)
+        _push_one<<<1, 32>>>(q, state_t(i, i));
     }
     // </user-defined>
     
@@ -120,11 +130,15 @@ struct enactor_t {
       
       // <user-defined>
       auto G            = problem->get_graph();
+      auto n_vertices   = problem->get_graph().get_number_of_vertices();
       edge_t* distances = problem->result.distances;
       
-      auto kernel = [G, distances] __device__ (vertex_t node, queue_t q) -> void {
+      auto kernel = [G, n_vertices, distances] __device__ (state_t<vertex_t> state, queue_t q) -> void {
+        
+          vertex_t node = state.node;
+          vertex_t src  = state.src;
           
-          vertex_t node_distance = ((volatile vertex_t * )distances)[node];
+          vertex_t node_distance = ((volatile vertex_t * )distances)[src * n_vertices + node];
           
           const vertex_t start  = G.get_starting_edge(node);
           const vertex_t degree = G.get_number_of_neighbors(node);
@@ -132,9 +146,9 @@ struct enactor_t {
           for(int idx = 0; idx < degree; idx++) {
               vertex_t neib         = G.get_destination_vertex(start + idx);
               weight_t dist_to_neib = G.get_edge_weight(start + idx);
-              vertex_t old_dist     = atomicMin(distances + neib, node_distance + dist_to_neib);
+              vertex_t old_dist     = atomicMin(distances + (src * n_vertices + neib), node_distance + dist_to_neib);
               if(old_dist > node_distance + dist_to_neib) {
-                  q.push(neib);
+                  q.push(state_t(src, neib));
               }
           }
       };
@@ -149,18 +163,17 @@ struct enactor_t {
 
 template <typename graph_type>
 float run(graph_type& G,
-          typename graph_type::vertex_type& single_source,  // Parameter
-          typename graph_type::edge_type* distances           // Output
+          typename graph_type::edge_type* distances // Output
 ) {
   
   // <user-defined>
   using vertex_t = typename graph_type::vertex_type;
   using edge_t   = typename graph_type::edge_type;
 
-  using param_type   = param_t<vertex_t>;
+  using param_type   = param_t;
   using result_type  = result_t<edge_t>;
   
-  param_type param(single_source);
+  param_type param;
   result_type result(distances);
   // </user-defined>
   
@@ -182,6 +195,6 @@ float run(graph_type& G,
   // </boiler-plate>
 }
 
-} // namespace sssp
+} // namespace apsp
 } // namespace async
 } // namespace gunrock

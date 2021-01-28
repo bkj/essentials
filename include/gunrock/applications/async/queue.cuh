@@ -80,7 +80,8 @@ struct Queue {
 
 template<typename T, typename CounterT>
 __forceinline__ __device__ T Queue<T, CounterT>::get(CounterT index) const{
-    return ((volatile T *)queue)[index];
+    // return ((volatile T *)queue)[index];
+    return queue[index];
 }
 
 template<typename T, typename CounterT>
@@ -132,9 +133,9 @@ __global__ void _launch_thread(Queue<T, CounterT> q, Functor F, Args... args) {
     do {
         // Run
         while(index < end) { // Consume while there are valid elements in the queue
-            T task = q.get(index);
-            assert(task != -1);
-            F(task, args...);
+            // T task = q.get(index);
+            // assert(task != -1);
+            F(q.get(index), args...);
             __syncwarp();
             index = q.next();
         }
