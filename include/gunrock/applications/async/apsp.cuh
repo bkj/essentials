@@ -105,7 +105,7 @@ struct enactor_t {
         
         auto capacity = min(
           single_queue_t(1 << 30), 
-          max(single_queue_t(1024), single_queue_t(n_vertices * n_vertices))
+          max(single_queue_t(1024), single_queue_t(n_vertices * n_vertices * 5))
         );
         
         q.init(capacity, num_queue, min_iter);
@@ -137,6 +137,8 @@ struct enactor_t {
         
           vertex_t node = state.node;
           vertex_t src  = state.src;
+          
+          // printf("src=%d | node=%d\n", src, node);
           
           vertex_t node_distance = ((volatile vertex_t * )distances)[src * n_vertices + node];
           
