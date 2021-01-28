@@ -21,8 +21,8 @@ struct param_t {
 // <user-defined>
 template <typename edge_t>
 struct result_t {
-  edge_t* depth;
-  result_t(edge_t* _depth) : depth(_depth) {}
+  edge_t* distances;
+  result_t(edge_t* _distances) : distances(_distances) {}
 };
 // </user-defined>
 
@@ -56,9 +56,9 @@ struct problem_t {
     auto n_vertices = g.get_number_of_vertices();
     
     auto single_source = param.single_source;
-    auto d_depth       = thrust::device_pointer_cast(this->result.depth);
-    thrust::fill(thrust::device, d_depth + 0, d_depth + n_vertices, n_vertices + 1);
-    thrust::fill(thrust::device, d_depth + single_source, d_depth + single_source + 1, 0);
+    auto d_distances       = thrust::device_pointer_cast(this->result.distances);
+    thrust::fill(thrust::device, d_distances + 0, d_distances + n_vertices, n_vertices + 1);
+    thrust::fill(thrust::device, d_distances + single_source, d_distances + single_source + 1, 0);
     // </user-defined>
   }
 };
@@ -119,20 +119,21 @@ struct enactor_t {
       // </boiler-plate>
       
       // <user-defined>
-      auto G        = problem->get_graph();
-      edge_t* depth = problem->result.depth;
+      auto G            = problem->get_graph();
+      edge_t* distances = problem->result.distances;
       
-      auto kernel = [G, depth] __device__ (vertex_t node, queue_t q) -> void {
+      auto kernel = [G, distances] __device__ (vertex_t node, queue_t q) -> void {
           
-          vertex_t d = ((volatile vertex_t * )depth)[node];
+          vertex_t node_distance = ((volatile vertex_t * )distances)[node];
           
           const vertex_t start  = G.get_starting_edge(node);
           const vertex_t degree = G.get_number_of_neighbors(node);
           
           for(int idx = 0; idx < degree; idx++) {
-              vertex_t neib  = G.get_destination_vertex(start + idx);
-              vertex_t old_d = atomicMin(depth + neib, d + 1);
-              if(old_d > d + 1) {
+              vertex_t neib         = G.get_destination_vertex(start + idx);
+              weight_t dist_to_neib = G.get_edge_weight(start + idx);
+              vertex_t old_dist     = atomicMin(distances + neib, node_distance + dist_to_neib);
+              if(old_dist > node_distance + dist_to_neib) {
                   q.push(neib);
               }
           }
@@ -149,7 +150,7 @@ struct enactor_t {
 template <typename graph_type>
 float run(graph_type& G,
           typename graph_type::vertex_type& single_source,  // Parameter
-          typename graph_type::edge_type* depth           // Output
+          typename graph_type::edge_type* distances           // Output
 ) {
   
   // <user-defined>
@@ -160,7 +161,7 @@ float run(graph_type& G,
   using result_type  = result_t<edge_t>;
   
   param_type param(single_source);
-  result_type result(depth);
+  result_type result(distances);
   // </user-defined>
   
   // <boiler-plate>

@@ -48,14 +48,14 @@ void test_async_sssp(int num_arguments, char** argument_array) {
   
   vertex_t single_source = 0;
   vertex_t n_vertices    = G.get_number_of_vertices();
-  thrust::device_vector<vertex_t> depth(n_vertices);
+  thrust::device_vector<vertex_t> distances(n_vertices);
   
   // --
   // Run problem
   
   printf("run\n");
   
-  float elapsed = async::sssp::run(G, single_source, depth.data().get());
+  float elapsed = async::sssp::run(G, single_source, distances.data().get());
   
   cudaDeviceSynchronize();
   printf("complete\n");
@@ -63,10 +63,10 @@ void test_async_sssp(int num_arguments, char** argument_array) {
   // --
   // Log + Validate
   
-  thrust::host_vector<edge_t> h_depth = depth;
+  thrust::host_vector<edge_t> h_distances = distances;
   
   edge_t acc = 0;
-  for(vertex_t i = 0 ; i < n_vertices; i++) acc += h_depth[i];
+  for(vertex_t i = 0 ; i < n_vertices; i++) acc += h_distances[i];
   
   printf("\n");
   printf("elapsed=%f\n", elapsed);
