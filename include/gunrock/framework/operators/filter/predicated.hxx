@@ -74,81 +74,50 @@ void execute(graph_t& G,
     return gunrock::util::limits::is_valid(i) ? op(i) : false;
   };
 
-  // Init GPUs
-  int orig_device = 0;
-  cudaGetDevice(&orig_device);
-  
-  struct gpu_info {
-    cudaStream_t stream;
-    cudaEvent_t  event;
-    type_t*      input_begin;
-    type_t*      input_end;
-    type_t*      output_begin;
-  };
-  
-  std::vector<gpu_info> gpu_infos;
-
-  int num_gpus = 1;
-  cudaGetDeviceCount(&num_gpus);
+  int num_gpus    = context.size();
   auto chunk_size = (input->size() + num_gpus - 1) / num_gpus;
+
+  type_t* input_begins[num_gpus];
+  type_t* input_ends[num_gpus];
+  type_t* output_begins[num_gpus];
+  size_t new_sizes[num_gpus];
   
   for(int i = 0; i < num_gpus; i++) {
-    gpu_info info;
+    auto ctx = mcontext.get_context(i);
+    cudaSetDevice(ctx._ordinal);
     
-    cudaSetDevice(i);
-    cudaStreamCreateWithFlags(&info.stream, cudaStreamNonBlocking);
-    cudaEventCreate(&info.event);
-
-    info.input_begin  = input->begin() + chunk_size * i;
-    info.input_end    = input->begin() + chunk_size * (i + 1);
-    info.output_begin = output->begin() + chunk_size * i;
-    
-    if(i == num_gpus - 1) info.input_end = input->end();
-    
-    gpu_infos.push_back(info);
-  }
-
-  // Run
-  size_t new_sizes[num_gpus];
-  for(int i = 0; i < num_gpus; i++) {
-    cudaSetDevice(i);
     auto new_length = thrust::copy_if(
-      thrust::cuda::par.on(gpu_infos[i].stream),
-      gpu_infos[i].input_begin,
-      gpu_infos[i].input_end,
-      gpu_infos[i].output_begin,
+      thrust::cuda::par.on(ctx.stream()),
+      input_begins[i],
+      input_ends[i],
+      output_begins[i],
       predicate
     );
-    new_sizes[i] = thrust::distance(gpu_infos[i].output_begin, new_length);
-    cudaEventRecord(gpu_infos[i].event, gpu_infos[i].stream);
+    new_sizes[i] = thrust::distance(output_begins[i], new_length);
+    cudaEventRecord(ctx.event(), ctx.stream());
   }
 
   // Sync
-  for(int i = 0; i < num_gpus; i++)
-    cudaStreamWaitEvent(context.stream(), gpu_infos[i].event, 0);
+  for(int i = 0; i < num_gpus; i++) {
+    auto ctx = context.get_context(i);
+    cudaStreamWaitEvent(context.get_context(0).stream(), ctx.event(), 0);
+  }
   
   // Append results
   size_t offset = new_sizes[0];
   for(int i = 1; i < num_gpus; i++) {
     thrust::copy(
       thrust::device,
-      gpu_infos[i].output_begin,
-      gpu_infos[i].output_begin + new_sizes[i],
-      gpu_infos[0].output_begin + offset
+      output_begins[i],
+      output_begins[i] + new_sizes[i],
+      output_begins[0] + offset
     );
     
     offset += new_sizes[i];
   }
   output->resize(offset);
   
-  // Cleanup 
-  for(int i = 0; i < num_gpus; i++) {
-    cudaSetDevice(i);
-    cudaStreamDestroy(gpu_infos[i].stream);
-    cudaEventDestroy(gpu_infos[i].event);
-  }
-  
-  cudaSetDevice(orig_device);
+  cudaSetDevice(mcontext.get_context(0)._ordinal);
 }
 
 #endif
