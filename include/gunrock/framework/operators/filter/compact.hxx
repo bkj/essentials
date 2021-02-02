@@ -9,7 +9,7 @@ namespace filter {
 namespace compact {
 
 template <typename graph_t, typename operator_t, typename frontier_t>
-void execute(graph_t& G,
+void execute_gpu(graph_t& G,
              operator_t op,
              frontier_t* input,
              frontier_t* output,

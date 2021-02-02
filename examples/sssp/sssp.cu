@@ -57,7 +57,9 @@ void test_sssp(int num_arguments, char** argument_array) {
 
   // --
   // Params and memory allocation
-
+  
+for(int i = 0; i < 100; i++) {
+    
   vertex_t single_source = 0;
 
   vertex_t n_vertices = G.get_number_of_vertices();
@@ -66,7 +68,7 @@ void test_sssp(int num_arguments, char** argument_array) {
 
   // --
   // GPU Run
-
+  
   float gpu_elapsed = gunrock::sssp::run(
       G, single_source, distances.data().get(), predecessors.data().get());
 
@@ -97,6 +99,9 @@ void test_sssp(int num_arguments, char** argument_array) {
   std::cout << "GPU Elapsed Time : " << gpu_elapsed << " (ms)" << std::endl;
   std::cout << "CPU Elapsed Time : " << cpu_elapsed << " (ms)" << std::endl;
   std::cout << "Number of errors : " << n_errors << std::endl;
+  
+}
+
 }
 
 int main(int argc, char** argv) {

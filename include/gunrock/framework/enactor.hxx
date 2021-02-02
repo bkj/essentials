@@ -112,17 +112,15 @@ struct enactor_t {
       loop(*context);
       ++iteration;
       
-      // <<
-      printf("active_frontier: ");
-      active_frontier->print();
-      printf("\n");
+      // // <<
+      // printf("active_frontier: ");
+      // active_frontier->print();
+      // printf("\n");
       
-      printf("inactive_frontier: ");
-      inactive_frontier->print();
-      printf("\n");
-      // >>
-      
-      // break;
+      // printf("inactive_frontier: ");
+      // inactive_frontier->print();
+      // printf("\n");
+      // // >>
     }
     return timer.end();
   }

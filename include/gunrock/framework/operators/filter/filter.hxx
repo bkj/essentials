@@ -23,14 +23,28 @@ void execute(graph_t& G,
              frontier_t* output,
              cuda::multi_context_t& context) {
   
-  if (type == filter_algorithm_t::compact)
-    compact::execute(G, op, input, output, *(context.get_context(0)));
-  else if (type == filter_algorithm_t::predicated)
-    predicated::execute(G, op, input, output, *(context.get_context(0)));
-  else if (type == filter_algorithm_t::bypass)
-    bypass::execute(G, op, input, output, *(context.get_context(0)));
-  else
-    error::throw_if_exception(cudaErrorUnknown, "Filter type not supported.");
+  if(context.size() == 1) {
+    
+    auto context0 = context.get_context(0);
+    
+    if (type == filter_algorithm_t::compact)
+      compact::execute_gpu(G, op, input, output, *context0); // multigpu not implemented yet
+    else if (type == filter_algorithm_t::predicated)
+      predicated::execute_gpu(G, op, input, output, *context0);
+    else if (type == filter_algorithm_t::bypass)
+      bypass::execute_gpu(G, op, input, output, *context0);
+    else
+      error::throw_if_exception(cudaErrorUnknown, "Filter type not supported.");    
+  
+  } else {
+    // !! compact not implemented yet
+    if (type == filter_algorithm_t::predicated)
+      predicated::execute_mgpu(G, op, input, output, context);
+    else if (type == filter_algorithm_t::bypass)
+      bypass::execute_mgpu(G, op, input, output, context);
+    else
+      error::throw_if_exception(cudaErrorUnknown, "Filter type not supported.");
+  }
 }
 
 template <filter_algorithm_t type,

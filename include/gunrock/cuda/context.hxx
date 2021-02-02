@@ -99,6 +99,9 @@ class standard_context_t : public context_t {
   virtual cuda::event_t event() override { return _event; }
 
   virtual util::timer_t& timer() override { return _timer; }
+  
+  virtual cuda::device_id_t ordinal() {return _ordinal; }
+  
 };  // class standard_context_t
 
 class multi_context_t {
@@ -129,6 +132,11 @@ class multi_context_t {
     auto contexts_ptr = contexts.data();
     return contexts_ptr[device];
   }
+  
+  auto size() {
+    return contexts.size();
+  }
+  
 };  // class multi_context_t
 
 }  // namespace cuda
