@@ -10,6 +10,19 @@ void test_sssp(int num_arguments, char** argument_array) {
     std::cerr << "usage: ./bin/<program-name> filename.mtx" << std::endl;
     exit(1);
   }
+  
+  // >>
+  // Enable all-to-all memory access
+  int num_gpus = 1;
+  cudaGetDeviceCount(&num_gpus);
+  for(int curr = 0; curr < num_gpus; curr++) {
+    cudaSetDevice(curr);
+    for(int peer = 0; peer < num_gpus; peer++) {
+      if(curr == peer) continue;
+      cudaDeviceEnablePeerAccess(peer, 0);
+    }
+  }
+  // <<
 
   // --
   // Define types

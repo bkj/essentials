@@ -21,13 +21,14 @@ void execute(graph_t& G,
              operator_t op,
              frontier_t* input,
              frontier_t* output,
-             cuda::standard_context_t* context) {
+             cuda::multi_context_t& context) {
+  
   if (type == filter_algorithm_t::compact)
-    compact::execute(G, op, input, output, *context);
+    compact::execute(G, op, input, output, *(context.get_context(0)));
   else if (type == filter_algorithm_t::predicated)
-    predicated::execute(G, op, input, output, *context);
+    predicated::execute(G, op, input, output, *(context.get_context(0)));
   else if (type == filter_algorithm_t::bypass)
-    bypass::execute(G, op, input, output, *context);
+    bypass::execute(G, op, input, output, *(context.get_context(0)));
   else
     error::throw_if_exception(cudaErrorUnknown, "Filter type not supported.");
 }
@@ -39,7 +40,7 @@ template <filter_algorithm_t type,
 void execute(graph_t& G,
              enactor_type* E,
              operator_t op,
-             cuda::standard_context_t* context) {
+             cuda::multi_context_t& context) {
   execute<type>(G,                         // graph
                 op,                        // operator_t
                 E->get_input_frontier(),   // input frontier

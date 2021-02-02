@@ -82,13 +82,13 @@ struct enactor_t : gunrock::enactor_t<problem_t> {
   using edge_t = typename problem_t::edge_t;
   using weight_t = typename problem_t::weight_t;
 
-  void prepare_frontier(cuda::standard_context_t* context) override {
+  void prepare_frontier(cuda::multi_context_t& context) override {
     auto P = this->get_problem();
     auto f = this->get_input_frontier();
     f->push_back(P->param.single_source);
   }
 
-  void loop(cuda::standard_context_t* context) override {
+  void loop(cuda::multi_context_t& context) override {
     // Data slice
     auto E = this->get_enactor();
     auto P = this->get_problem();
@@ -123,17 +123,23 @@ struct enactor_t : gunrock::enactor_t<problem_t> {
 
       visited[vertex] = iteration;
       return G.get_number_of_neighbors(vertex) > 0;
+      
+      // return vertex > 12;
     };
 
     // Execute advance operator on the provided lambda
     operators::advance::execute<operators::advance_type_t::vertex_to_vertex,
                                 operators::advance_direction_t::forward,
                                 operators::load_balance_t::merge_path>(
-        G, E, shortest_path, context);
-
+        G, E, shortest_path, context.get_context(0));
+    
+    cudaDeviceSynchronize();
+    
     // Execute filter operator on the provided lambda
-    operators::filter::execute<operators::filter_algorithm_t::compact>(
+    operators::filter::execute<operators::filter_algorithm_t::predicated>(
         G, E, remove_completed_paths, context);
+      
+    cudaDeviceSynchronize();
   }
 
 };  // struct enactor_t
@@ -156,8 +162,12 @@ float run(graph_t& G,
   // </user-defined>
 
   // <boiler-plate>
+  thrust::host_vector<int> devices;
+  for(int device = 0 ; device < 4; device++)
+    devices.push_back(device);
+  
   auto multi_context =
-      std::shared_ptr<cuda::multi_context_t>(new cuda::multi_context_t(0));
+      std::shared_ptr<cuda::multi_context_t>(new cuda::multi_context_t(devices));
 
   using problem_type = problem_t<graph_t, param_type, result_type>;
   using enactor_type = enactor_t<problem_type>;

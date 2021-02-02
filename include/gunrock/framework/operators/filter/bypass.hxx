@@ -6,6 +6,10 @@ namespace gunrock {
 namespace operators {
 namespace filter {
 namespace bypass {
+
+// #define MGPU
+
+#ifndef MGPU
 template <typename graph_t, typename operator_t, typename frontier_t>
 void execute(graph_t& G,
              operator_t op,
@@ -32,9 +36,9 @@ void execute(graph_t& G,
                     bypass            // predicate
   );
 }
-
+#else
 template <typename graph_t, typename operator_t, typename frontier_t>
-void mgpu_execute(graph_t& G,
+void execute(graph_t& G,
              operator_t op,
              frontier_t* input,
              frontier_t* output,
@@ -113,12 +117,13 @@ void mgpu_execute(graph_t& G,
   
   cudaSetDevice(orig_device);
 }
+#endif
 
 template <typename graph_t, typename operator_t, typename frontier_t>
 void execute(graph_t& G,
              operator_t op,
              frontier_t* input,
-             cuda::standard_context_t& context) {
+             cuda::multi_context_t& context) {
   // in-place bypass filter (doesn't require an output frontier.)
   execute(G, op, input, input, context);
 }
