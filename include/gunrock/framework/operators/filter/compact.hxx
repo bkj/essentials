@@ -31,7 +31,6 @@ void execute_gpu(graph_t& G,
     output_data[dest_idx] = input_data[source_idx];
   });
 }
-
 }  // namespace compact
 }  // namespace filter
 }  // namespace operators

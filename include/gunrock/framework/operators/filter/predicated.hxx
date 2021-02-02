@@ -34,12 +34,7 @@ void execute_gpu(graph_t& G,
   );
 
   auto new_size = thrust::distance(output->begin(), new_length);
-  
-  size_t new_sizes[1];
-  
-  new_sizes[0] = new_size;
-  
-  output->resize(new_sizes[0]);
+  output->resize(new_size);
 
   // Uniquify!
   // auto new_end = thrust::unique(

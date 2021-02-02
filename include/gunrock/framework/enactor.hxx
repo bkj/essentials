@@ -111,16 +111,6 @@ struct enactor_t {
     while (!is_converged(*context)) {
       loop(*context);
       ++iteration;
-      
-      // // <<
-      // printf("active_frontier: ");
-      // active_frontier->print();
-      // printf("\n");
-      
-      // printf("inactive_frontier: ");
-      // inactive_frontier->print();
-      // printf("\n");
-      // // >>
     }
     return timer.end();
   }
