@@ -10,19 +10,6 @@ void test_sssp(int num_arguments, char** argument_array) {
     std::cerr << "usage: ./bin/<program-name> filename.mtx" << std::endl;
     exit(1);
   }
-  
-  // >>
-  // Enable all-to-all memory access
-  int num_gpus = 1;
-  cudaGetDeviceCount(&num_gpus);
-  for(int curr = 0; curr < num_gpus; curr++) {
-    cudaSetDevice(curr);
-    for(int peer = 0; peer < num_gpus; peer++) {
-      if(curr == peer) continue;
-      cudaDeviceEnablePeerAccess(peer, 0);
-    }
-  }
-  // <<
 
   // --
   // Define types
@@ -57,8 +44,6 @@ void test_sssp(int num_arguments, char** argument_array) {
 
   // --
   // Params and memory allocation
-  
-for(int i = 0; i < 100; i++) {
     
   vertex_t single_source = 0;
 
@@ -99,9 +84,6 @@ for(int i = 0; i < 100; i++) {
   std::cout << "GPU Elapsed Time : " << gpu_elapsed << " (ms)" << std::endl;
   std::cout << "CPU Elapsed Time : " << cpu_elapsed << " (ms)" << std::endl;
   std::cout << "Number of errors : " << n_errors << std::endl;
-  
-}
-
 }
 
 int main(int argc, char** argv) {

@@ -133,7 +133,7 @@ struct enactor_t : gunrock::enactor_t<problem_t> {
     };
 
     // Execute filter operator on the provided lambda.
-    operators::filter::execute<operators::filter_algorithm_t::bypass>(
+    operators::filter::execute<operators::filter_algorithm_t::compact>(
         G, E, color_me_in, context);
   }
   // </user-defined>

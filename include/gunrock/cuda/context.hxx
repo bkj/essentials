@@ -111,7 +111,8 @@ class multi_context_t {
   static constexpr std::size_t MAX_NUMBER_OF_GPUS = 1024;
 
   // Multiple devices.
-  multi_context_t(thrust::host_vector<cuda::device_id_t> _devices) : devices(_devices) {
+  multi_context_t(thrust::host_vector<cuda::device_id_t> _devices) 
+      : devices(_devices) {
     for (auto& device : devices) {
       standard_context_t* device_context = new standard_context_t(device);
       contexts.push_back(device_context);
@@ -135,6 +136,21 @@ class multi_context_t {
   
   auto size() {
     return contexts.size();
+  }
+  
+  void enable_peer_access() {
+    int num_gpus = size();
+    for(int i = 0; i < num_gpus; i++) {
+      auto ctx = get_context(i);
+      cudaSetDevice(ctx->ordinal());
+      
+      for(int j = 0; j < num_gpus; j++) {
+        if(i == j) continue;
+        
+        auto ctx_peer = get_context(j);
+        cudaDeviceEnablePeerAccess(ctx_peer->ordinal(), 0);
+      }
+    }
   }
   
 };  // class multi_context_t

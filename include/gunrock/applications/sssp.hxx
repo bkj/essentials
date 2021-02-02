@@ -162,12 +162,15 @@ float run(graph_t& G,
   // </user-defined>
 
   // <boiler-plate>
+  
   thrust::host_vector<int> devices;
   for(int device = 0 ; device < 4; device++)
     devices.push_back(device);
   
   auto multi_context =
       std::shared_ptr<cuda::multi_context_t>(new cuda::multi_context_t(devices));
+  
+  multi_context->enable_peer_access(); // Enable MGPU support
 
   using problem_type = problem_t<graph_t, param_type, result_type>;
   using enactor_type = enactor_t<problem_type>;
