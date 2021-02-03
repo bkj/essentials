@@ -151,6 +151,9 @@ class multi_context_t {
         cudaDeviceEnablePeerAccess(ctx_peer->ordinal(), 0);
       }
     }
+    
+    auto ctx0 = get_context(0);
+    cudaSetDevice(ctx0->ordinal());
   }
   
 };  // class multi_context_t

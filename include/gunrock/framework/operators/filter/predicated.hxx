@@ -14,7 +14,8 @@ void execute_gpu(graph_t& G,
              frontier_t* output,
              cuda::standard_context_t& context) {
   using type_t = std::remove_pointer_t<decltype(input->data())>;
-
+  
+  
   // Allocate output size if necessary.
   if (output->size() != input->size()) {
     output->resize(input->size());
@@ -23,7 +24,7 @@ void execute_gpu(graph_t& G,
   auto predicate = [=] __host__ __device__(type_t const& i) -> bool {
     return gunrock::util::limits::is_valid(i) ? op(i) : false;
   };
-
+  
   // Copy w/ predicate!
   auto new_length = thrust::copy_if(
       thrust::cuda::par.on(context.stream()),  // execution policy
@@ -35,7 +36,7 @@ void execute_gpu(graph_t& G,
 
   auto new_size = thrust::distance(output->begin(), new_length);
   output->resize(new_size);
-
+  
   // Uniquify!
   // auto new_end = thrust::unique(
   //     thrust::cuda::par.on(context.stream()),  // execution policy
@@ -69,7 +70,7 @@ void execute_mgpu(graph_t& G,
   // Setup
   int num_gpus    = context.size();
   auto chunk_size = (input->size() + num_gpus - 1) / num_gpus;
-
+  
   type_t* input_begins[num_gpus];
   type_t* input_ends[num_gpus];
   type_t* output_begins[num_gpus];
@@ -82,12 +83,12 @@ void execute_mgpu(graph_t& G,
   input_ends[num_gpus - 1] = input->end();
   
   // Map
-  size_t new_sizes[num_gpus];
+  int new_sizes[num_gpus];
   for(int i = 0; i < num_gpus; i++) {
     auto ctx = context.get_context(i);
     cudaSetDevice(ctx->ordinal());
     
-    auto new_length = thrust::copy_if(
+    auto new_end = thrust::copy_if(
       thrust::cuda::par.on(ctx->stream()),
       input_begins[i],
       input_ends[i],
@@ -95,10 +96,10 @@ void execute_mgpu(graph_t& G,
       predicate
     );
     
-    new_sizes[i] = thrust::distance(output_begins[i], new_length);
+    new_sizes[i] = (int)thrust::distance(output_begins[i], new_end);
     cudaEventRecord(ctx->event(), ctx->stream());
   }
-  
+
   // Sync
   auto context0 = context.get_context(0);
   for(int i = 0; i < num_gpus; i++) {
@@ -106,22 +107,19 @@ void execute_mgpu(graph_t& G,
     cudaStreamWaitEvent(context0->stream(), ctx->event(), 0);
   }
   
-  // Reduce
-  size_t offset = new_sizes[0];
-  for(int i = 1; i < num_gpus; i++) {
-    thrust::copy(
-      thrust::device,
-      output_begins[i],
-      output_begins[i] + new_sizes[i],
-      output_begins[0] + offset
-    );
-    
+  // Reduce (using `input` as temporary storage)
+  int offset = 0;
+  for(int i = 0; i < num_gpus; i++) {
+    thrust::copy_n(thrust::device, output_begins[i], new_sizes[i], input->begin() + offset);
     offset += new_sizes[i];
   }
-  output->resize(offset);
   
-  // Cleanup
   cudaSetDevice(context0->ordinal());
+  
+  // Copy back to `output` -- there must be a better way to do this w/ pointers -- @neoblizz?
+  thrust::copy_n(thrust::device, input->begin(), offset, output->begin());
+  
+  output->resize(offset);
 }
 
 }  // namespace predicated

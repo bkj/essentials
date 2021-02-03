@@ -55,11 +55,11 @@ void test_color(int num_arguments, char** argument_array) {
   // --
   // Log
 
-  std::cout << "Colors (output) = ";
+  // std::cout << "Colors (output) = ";
   thrust::copy(colors.begin(), colors.end(),
-               std::ostream_iterator<weight_t>(std::cout, " "));
+               std::ostream_iterator<weight_t>(std::cout, "\n"));
   std::cout << std::endl;
-  std::cout << "color Elapsed Time: " << elapsed << " (ms)" << std::endl;
+  std::cerr << "color Elapsed Time: " << elapsed << " (ms)" << std::endl;
 }
 
 int main(int argc, char** argv) {
