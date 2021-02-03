@@ -24,6 +24,7 @@ void execute(graph_t& G,
              cuda::multi_context_t& context) {
   
   if(context.size() == 1) {
+    printf("context.size() == 1\n");
     
     auto context0 = context.get_context(0);
     
@@ -37,6 +38,8 @@ void execute(graph_t& G,
       error::throw_if_exception(cudaErrorUnknown, "Filter type not supported.");    
   
   } else {
+    printf("context.size() > 1\n");
+    
     // !! compact not implemented yet
     if (type == filter_algorithm_t::predicated)
       predicated::execute_mgpu(G, op, input, output, context);
