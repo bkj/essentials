@@ -123,8 +123,6 @@ struct enactor_t : gunrock::enactor_t<problem_t> {
 
       visited[vertex] = iteration;
       return G.get_number_of_neighbors(vertex) > 0;
-      
-      // return vertex > 12;
     };
 
     // Execute advance operator on the provided lambda
