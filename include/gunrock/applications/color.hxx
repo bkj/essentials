@@ -72,7 +72,7 @@ struct enactor_t : gunrock::enactor_t<problem_t> {
   using weight_t = typename problem_t::weight_t;
 
   // <user-defined>
-  void prepare_frontier(cuda::standard_context_t* context) override {
+  void prepare_frontier(cuda::multi_context_t& context) override {
     auto P = this->get_problem();
     auto f = this->get_input_frontier();
 
@@ -83,7 +83,7 @@ struct enactor_t : gunrock::enactor_t<problem_t> {
       f->push_back(v);
   }
 
-  void loop(cuda::standard_context_t* context) override {
+  void loop(cuda::multi_context_t& context) override {
     // Data slice
     auto E = this->get_enactor();
     auto P = this->get_problem();
@@ -133,7 +133,7 @@ struct enactor_t : gunrock::enactor_t<problem_t> {
     };
 
     // Execute filter operator on the provided lambda.
-    operators::filter::execute<operators::filter_algorithm_t::compact>(
+    operators::filter::execute<operators::filter_algorithm_t::predicated>(
         G, E, color_me_in, context);
   }
   // </user-defined>
@@ -154,8 +154,15 @@ float run(graph_t& G,
   // </user-defined>
 
   // <boiler-plate>
+
+  thrust::host_vector<int> devices;
+  for(int device = 0 ; device < 4; device++)
+    devices.push_back(device);
+  
   auto multi_context =
-      std::shared_ptr<cuda::multi_context_t>(new cuda::multi_context_t(0));
+      std::shared_ptr<cuda::multi_context_t>(new cuda::multi_context_t(devices));
+  
+  multi_context->enable_peer_access(); // Enable MGPU support
 
   using problem_type = problem_t<graph_t, param_type, result_type>;
   using enactor_type = enactor_t<problem_type>;
