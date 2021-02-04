@@ -72,12 +72,12 @@ option(ESSENTIALS_GENCODE_SM60
 
 option(ESSENTIALS_GENCODE_SM61
     "ON to generate code for Compute Capability 6.1 devices (e.g. GeForce GTX 1080)"
-    ON)
+    OFF)
 
 #Volta Architecture: CUDA 9
 option(ESSENTIALS_GENCODE_SM70
     "ON to generate code for Compute Capability 7.0 devices (e.g. Volta V100)"
-    OFF)
+    ON)
 
 option(ESSENTIALS_GENCODE_SM72
     "ON to generate code for Compute Capability 7.2 devices (e.g. Jetson AGX Xavier)"

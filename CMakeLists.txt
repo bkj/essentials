@@ -69,7 +69,7 @@ set_target_properties(essentials
 ####################################################
 ############ TARGET COMPILER DEFINITIONS ###########
 ####################################################
-set(SM_TARGET 61) # ?? SM_TARGET hard-coded for now.
+set(SM_TARGET 70) # ?? SM_TARGET hard-coded for now.
 target_compile_definitions(essentials
   INTERFACE SM_TARGET=${SM_TARGET}
 )
@@ -96,8 +96,9 @@ target_include_directories(essentials
 ####################################################
 ############ TARGET LINK LIBRARIES #################
 ####################################################
+find_package(OpenMP REQUIRED)
 target_link_libraries(essentials
-    INTERFACE curand nvToolsExt
+    INTERFACE curand nvToolsExt OpenMP::OpenMP_CXX
 )
 
 ####################################################
@@ -118,6 +119,7 @@ set(CXX_FLAGS
   -Wno-strict-aliasing 
   -Wno-unused-function 
   -Wno-format-security
+  -fopenmp
 )
 
 set(NVCC_FLAGS 
@@ -126,7 +128,7 @@ set(NVCC_FLAGS
   --expt-relaxed-constexpr 
   --use_fast_math 
   --ptxas-options -v
-  
+  -fopenmp
 )
 
 ####################################################

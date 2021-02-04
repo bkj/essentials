@@ -5,6 +5,6 @@
 # add_subdirectory(async_sssp)
 # add_subdirectory(async_apsp)
 # add_subdirectory(bfs)
-# add_subdirectory(color)
-add_subdirectory(test)
+add_subdirectory(color)
+# add_subdirectory(test)
 # end /* Add examples' subdirectories */

@@ -1,5 +1,6 @@
 #pragma once
 
+#include "omp.h"
 #include <gunrock/framework/operators/configs.hxx>
 
 namespace gunrock {
@@ -55,6 +56,8 @@ void execute_mgpu(graph_t& G,
              frontier_t* output,
              cuda::multi_context_t& context) {
   
+  auto context0 = context.get_context(0);
+  
   using type_t = std::remove_pointer_t<decltype(input->data())>;
 
   // Resize frontier as necessary
@@ -71,54 +74,67 @@ void execute_mgpu(graph_t& G,
   int num_gpus    = context.size();
   auto chunk_size = (input->size() + num_gpus - 1) / num_gpus;
   
-  type_t* input_begins[num_gpus];
-  type_t* input_ends[num_gpus];
-  type_t* output_begins[num_gpus];
-
-  for(int i = 0; i < num_gpus; i++) {
-    input_begins[i]  = input->begin() + chunk_size * i;
-    input_ends[i]    = input->begin() + chunk_size * (i + 1);
-    output_begins[i] = output->begin() + chunk_size * i;
-  }
-  input_ends[num_gpus - 1] = input->end();
-  
   // Map
   int new_sizes[num_gpus];
+  
+  #pragma omp parallel for num_threads(num_gpus)
   for(int i = 0; i < num_gpus; i++) {
     auto ctx = context.get_context(i);
     cudaSetDevice(ctx->ordinal());
-    
-    auto new_end = thrust::copy_if(
+
+    auto input_begin  = input->begin() + chunk_size * i;
+    auto output_begin = output->begin() + chunk_size * i;
+    auto input_end    = input->begin() + chunk_size * (i + 1);
+    if(i == num_gpus - 1) input_end = input->end();
+
+    auto new_output_end = thrust::copy_if(
       thrust::cuda::par.on(ctx->stream()),
-      input_begins[i],
-      input_ends[i],
-      output_begins[i],
+      input_begin,
+      input_end,
+      output_begin,
       predicate
     );
     
-    new_sizes[i] = (int)thrust::distance(output_begins[i], new_end);
+    new_sizes[i] = (int)thrust::distance(output_begin, new_output_end);
     cudaEventRecord(ctx->event(), ctx->stream());
   }
-
+  
   // Sync
-  auto context0 = context.get_context(0);
+  for(int i = 0; i < num_gpus; i++)
+    cudaStreamWaitEvent(context0->stream(), context.get_context(i)->event(), 0);
+  
+  // Compute offsets
+  int total_length = 0;
+  int offsets[num_gpus];
+  offsets[0] = 0;
+  for(int i = 1 ; i < num_gpus ; i++) offsets[i] = new_sizes[i - 1] + offsets[i - 1];
+  for(int i = 0 ; i < num_gpus ; i++) total_length += new_sizes[i];
+  
+  // Reduce
+  #pragma omp parallel for num_threads(num_gpus)
   for(int i = 0; i < num_gpus; i++) {
     auto ctx = context.get_context(i);
-    cudaStreamWaitEvent(context0->stream(), ctx->event(), 0);
+    cudaSetDevice(ctx->ordinal());
+
+    auto output_begin = output->begin() + chunk_size * i;
+    thrust::copy_n(
+      thrust::cuda::par.on(ctx->stream()), 
+      output_begin, 
+      new_sizes[i], 
+      input->begin() + offsets[i]
+    );
+    
+    cudaEventRecord(ctx->event(), ctx->stream());
   }
   
-  // Reduce (using `input` as temporary storage)
-  int offset = 0;
-  for(int i = 0; i < num_gpus; i++) {
-    thrust::copy_n(thrust::device, output_begins[i], new_sizes[i], input->begin() + offset);
-    offset += new_sizes[i];
-  }
-  
+  // Sync
+  for(int i = 0; i < num_gpus; i++)
+    cudaStreamWaitEvent(context0->stream(), context.get_context(i)->event(), 0);
+
   cudaSetDevice(context0->ordinal());
   
-  // Copy back to `output` -- there must be a better way to do this w/ pointers -- @neoblizz?
-  thrust::copy_n(thrust::device, input->begin(), offset, output->begin());
-  output->resize(offset);
+  thrust::copy_n(thrust::device, input->begin(), total_length, output->begin());
+  output->resize(total_length);
 }
 
 }  // namespace predicated
