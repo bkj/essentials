@@ -66,8 +66,8 @@ void execute_mgpu(graph_t& G,
   }
 
   // Define op
-  auto predicate = [=] __host__ __device__(type_t const& i) -> bool {
-    return gunrock::util::limits::is_valid(i) ? op(i) : false;
+  auto transform_predicate = [=] __host__ __device__(type_t const& i) -> type_t {
+    return gunrock::util::limits::is_valid(i) ? op(i) : -1;
   };
   
   // Setup
@@ -87,12 +87,12 @@ void execute_mgpu(graph_t& G,
     auto input_end    = input->begin() + chunk_size * (i + 1);
     if(i == num_gpus - 1) input_end = input->end();
 
-    auto new_output_end = thrust::copy_if(
+    auto new_output_end = thrust::transform(
       thrust::cuda::par.on(ctx->stream()),
       input_begin,
       input_end,
       output_begin,
-      predicate
+      transform_predicate
     );
     
     new_sizes[i] = (int)thrust::distance(output_begin, new_output_end);
@@ -133,8 +133,8 @@ void execute_mgpu(graph_t& G,
 
   cudaSetDevice(context0->ordinal());
   
-  thrust::copy_n(thrust::device, input->begin(), total_length, output->begin());
-  output->resize(total_length);
+  // thrust::copy_n(thrust::device, input->begin(), total_length, output->begin());
+  input->resize(total_length);
 }
 
 }  // namespace predicated
