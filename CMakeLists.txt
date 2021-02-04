@@ -97,7 +97,7 @@ target_include_directories(essentials
 ############ TARGET LINK LIBRARIES #################
 ####################################################
 target_link_libraries(essentials
-    INTERFACE curand
+    INTERFACE curand nvToolsExt
 )
 
 ####################################################
@@ -126,6 +126,7 @@ set(NVCC_FLAGS
   --expt-relaxed-constexpr 
   --use_fast_math 
   --ptxas-options -v
+  
 )
 
 ####################################################

@@ -63,9 +63,18 @@ class standard_context_t : public context_t {
     _ptx_version = cuda::make_compute_capability(attr.ptxVersion);
 
     cudaSetDevice(_ordinal);
-    cudaStreamCreate(&_stream);
+    // >>
+    // cudaStreamCreate(&_stream);
+    // --
+    cudaStreamCreateWithFlags(&_stream, cudaStreamNonBlocking);
+    // <<
+    
     cudaGetDeviceProperties(&_props, _ordinal);
+    // >>
     cudaEventCreate(&_event);
+    // --
+    // cudaEventCreateWithFlags (&_event, cudaEventDisableTiming);
+    // <<
   }
 
  public:

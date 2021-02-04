@@ -118,7 +118,6 @@ void execute_mgpu(graph_t& G,
   
   // Copy back to `output` -- there must be a better way to do this w/ pointers -- @neoblizz?
   thrust::copy_n(thrust::device, input->begin(), offset, output->begin());
-  
   output->resize(offset);
 }
 
