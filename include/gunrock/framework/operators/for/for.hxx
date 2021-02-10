@@ -13,8 +13,7 @@ __global__ void compute(const std::size_t begin,
                         const std::size_t end,
                         operator_type op) {
   const std::size_t STRIDE = (std::size_t)blockDim.x * gridDim.x;
-  for (std::size_t i = (std::size_t)blockDim.x * blockIdx.x + threadIdx.x;
-       i < end; i += STRIDE)
+  for (std::size_t i = (std::size_t)blockDim.x * blockIdx.x + threadIdx.x; i < end; i += STRIDE)
     op(i);
 }
 }  // namespace detail

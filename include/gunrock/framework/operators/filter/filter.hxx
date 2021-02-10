@@ -42,7 +42,7 @@ bool execute(graph_t& G,
   } else {
     if (type == filter_algorithm_t::predicated) {
       predicated::execute_mgpu(G, op, input, output, context);
-      return false;
+      return true;
     } else if (type == filter_algorithm_t::bypass) {
       bypass::execute_mgpu(G, op, input, output, context);
       return true;
