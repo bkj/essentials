@@ -153,12 +153,12 @@ class multi_context_t {
       auto ctx = get_context(i);
       cudaSetDevice(ctx->ordinal());
       
-      for(int j = 0; j < num_gpus; j++) {
-        if(i == j) continue;
+      // for(int j = 0; j < num_gpus; j++) {
+        // if(i == j) continue;
         
-        auto ctx_peer = get_context(j);
-        cudaDeviceEnablePeerAccess(ctx_peer->ordinal(), 0);
-      }
+        // auto ctx_peer = get_context(j);
+        cudaDeviceEnablePeerAccess(0, 0);
+      // }
     }
     
     auto ctx0 = get_context(0);

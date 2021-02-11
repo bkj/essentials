@@ -78,6 +78,7 @@ struct problem_t : gunrock::problem_t<graph_t> {
     
     int num_gpu = -1;
     cudaGetDeviceCount(&num_gpu);
+    printf("num_gpu=%d\n", num_gpu);
     for(int i = 0; i < num_gpu; i++) {
       cudaSetDevice(i);
       
@@ -139,10 +140,12 @@ struct enactor_t : gunrock::enactor_t<problem_t> {
     auto offsets1 = all_offsets[1];
     auto offsets2 = all_offsets[2];
     auto offsets3 = all_offsets[3];
+    
     auto indices0 = all_indices[0];
     auto indices1 = all_indices[1];
     auto indices2 = all_indices[2];
     auto indices3 = all_indices[3];
+    
     auto randoms0 = all_randoms[0];
     auto randoms1 = all_randoms[1];
     auto randoms2 = all_randoms[2];
