@@ -24,9 +24,10 @@ void test_color(int num_arguments, char** argument_array) {
 
   std::string filename = argument_array[1];
 
-  io::matrix_market_t<vertex_t, edge_t, weight_t> mm;
+  // io::matrix_market_t<vertex_t, edge_t, weight_t> mm;
   format::csr_t<memory::memory_space_t::device, vertex_t, edge_t, weight_t> csr;
-  csr.from_coo(mm.load(filename));
+  // csr.from_coo(mm.load(filename));
+  csr.read_binary(filename);
 
   // --
   // Build graph + metadata

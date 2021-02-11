@@ -50,6 +50,8 @@ bool execute(graph_t& G,
       error::throw_if_exception(cudaErrorUnknown, "Filter type not supported.");
     }
   }
+  
+  return false;
 }
 
 template <filter_algorithm_t type,
