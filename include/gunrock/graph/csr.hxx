@@ -34,6 +34,14 @@ class graph_csr_t {
   using vertex_pair_type = vertex_pair_t<vertex_type>;
 
  public:
+
+  vertex_type number_of_vertices;  // XXX: redundant
+  edge_type number_of_edges;       // XXX: redundant
+
+  edge_type* offsets;
+  vertex_type* indices;
+  weight_type* values;
+  
   __host__ __device__ graph_csr_t()
       : offsets(nullptr), indices(nullptr), values(nullptr) {}
 
@@ -115,14 +123,9 @@ class graph_csr_t {
     values = memory::raw_pointer_cast<weight_type>(Ax);
   }
 
- private:
+//  private:
   // Underlying data storage
-  vertex_type number_of_vertices;  // XXX: redundant
-  edge_type number_of_edges;       // XXX: redundant
 
-  edge_type* offsets;
-  vertex_type* indices;
-  weight_type* values;
 
 };  // struct graph_csr_t
 

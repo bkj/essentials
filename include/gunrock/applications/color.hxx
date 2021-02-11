@@ -13,6 +13,7 @@
 
 #include <bits/stdc++.h>
 #include <cstdlib>
+#include <cmath>
 
 #include <gunrock/applications/application.hxx>
 #include <gunrock/algorithms/generate/random.hxx>
@@ -34,7 +35,7 @@ template <typename graph_t, typename param_type, typename result_type>
 struct problem_t : gunrock::problem_t<graph_t> {
   param_type param;
   result_type result;
-
+  
   problem_t(graph_t& G,
             param_type& _param,
             result_type& _result,
@@ -47,11 +48,21 @@ struct problem_t : gunrock::problem_t<graph_t> {
   using edge_t = typename graph_t::edge_type;
   using weight_t = typename graph_t::weight_type;
 
+  // int num_gpu = 4;
+  // cudaGetDeviceCount(&num_gpu);
+  
+  edge_t* all_offsets[4];
+  vertex_t* all_indices[4];
+  
+  edge_t* offsets;
+  vertex_t* indices;
+
   thrust::device_vector<vertex_t> randoms;
 
   void reset() {
     auto g = this->get_graph();
     auto n_vertices = g.get_number_of_vertices();
+    auto n_edges = g.get_number_of_edges();
     auto d_colors = thrust::device_pointer_cast(this->result.colors);
     thrust::fill(thrust::device, d_colors + 0, d_colors + n_vertices,
                  gunrock::numeric_limits<vertex_t>::invalid());
@@ -60,6 +71,18 @@ struct problem_t : gunrock::problem_t<graph_t> {
     randoms.resize(n_vertices);
     algo::generate::random::uniform_distribution(0, n_vertices,
                                                  randoms.begin());
+    
+    offsets = g.offsets;
+    indices = g.indices;
+    
+    int num_gpu = 4;
+    for(int i = 0; i < num_gpu; i++) {
+      cudaMalloc((void **)&(all_offsets[i]), (n_vertices + 1) * sizeof(edge_t));
+      cudaMemcpy(all_offsets[i], g.offsets, (n_vertices + 1) * sizeof(edge_t), cudaMemcpyDeviceToDevice);
+
+      cudaMalloc((void **)&(all_indices[i]), n_edges * sizeof(vertex_t));
+      cudaMemcpy(all_indices[i], g.indices, n_edges * sizeof(vertex_t), cudaMemcpyDeviceToDevice);
+    }
   }
 };
 
@@ -93,22 +116,53 @@ struct enactor_t : gunrock::enactor_t<problem_t> {
     auto randoms = P->randoms.data().get();
     auto iteration = E->iteration;
 
-    auto color_me_in = [G, colors, randoms, iteration] __host__ __device__(
+    auto all_offsets = P->all_offsets;
+    auto all_indices = P->all_indices;
+
+    auto offsets0 = all_offsets[0];
+    auto indices0 = all_indices[0];
+    auto offsets1 = all_offsets[1];
+    auto indices1 = all_indices[1];
+    auto offsets2 = all_offsets[2];
+    auto indices2 = all_indices[2];
+    auto offsets3 = all_offsets[3];
+    auto indices3 = all_indices[3];
+
+    auto color_me_in = [
+      offsets0, indices0, offsets1, indices1, offsets2, indices2, offsets3, indices3,
+      colors, randoms, iteration] __host__ __device__(
                            vertex_t const& vertex) -> bool {
-      edge_t start_edge = G.get_starting_edge(vertex);
-      edge_t num_neighbors = G.get_number_of_neighbors(vertex);
+      
+      // int device = 0;
+      // cudaGetDevice(&device);
+      // printf("device=%d | vertex=%d\n", device, vertex);
+      
+      auto offsets = offsets0;
+      auto indices = indices0;
+      
+      // <<
+      // edge_t start_edge = G.get_starting_edge(vertex);
+      // edge_t num_neighbors = G.get_number_of_neighbors(vertex);
+      // --
+      edge_t start_edge    = offsets[vertex];
+      edge_t num_neighbors = offsets[vertex + 1] - offsets[vertex];
+      // >>
 
       bool colormax = true;
       bool colormin = true;
-
+      
       // Color two nodes at the same time.
       int color = iteration * 2;
-
+      
       // Main loop that goes over all the neighbors and finds the maximum or
       // minimum random number vertex.
       for (edge_t e = start_edge; e < start_edge + num_neighbors; ++e) {
-        vertex_t u = G.get_destination_vertex(e);
-
+        // <<
+        // vertex_t u = G.get_destination_vertex(e);
+        // --
+        vertex_t u = indices[e];
+        // >>
+      
         if (gunrock::util::limits::is_valid(colors[u]) &&
                 (colors[u] != color + 1) && (colors[u] != color + 2) ||
             (vertex == u))

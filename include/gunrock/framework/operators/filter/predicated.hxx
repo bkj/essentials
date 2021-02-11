@@ -81,7 +81,8 @@ void execute_mgpu(graph_t& G,
   for(int i = 0; i < num_gpus; i++) {
     auto ctx = context.get_context(i);
     cudaSetDevice(ctx->ordinal());
-
+    // std::cout << "device: " << ctx->ordinal() << std::endl;
+    
     auto input_begin  = input->begin() + chunk_size * i;
     auto output_begin = output->begin() + chunk_size * i;
     auto input_end    = input->begin() + chunk_size * (i + 1);
@@ -102,6 +103,8 @@ void execute_mgpu(graph_t& G,
   // Sync
   for(int i = 0; i < num_gpus; i++)
     cudaStreamWaitEvent(context0->stream(), context.get_context(i)->event(), 0);
+  
+  // std::cout << "done map" << std::endl;
   
   // Compute offsets
   int total_length = 0;

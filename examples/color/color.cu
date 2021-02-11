@@ -26,7 +26,13 @@ void test_color(int num_arguments, char** argument_array) {
 
   io::matrix_market_t<vertex_t, edge_t, weight_t> mm;
   format::csr_t<memory::memory_space_t::device, vertex_t, edge_t, weight_t> csr;
-  csr.from_coo(mm.load(filename));
+  // csr.from_coo(mm.load(filename));
+  csr.read_binary(filename);
+
+  std::cout << "csr.number_of_rows     : " << csr.number_of_rows     << std::endl;
+  std::cout << "csr.number_of_columns  : " << csr.number_of_columns  << std::endl;
+  std::cout << "csr.number_of_nonzeros : " << csr.number_of_nonzeros << std::endl;
+  
 
   // --
   // Build graph + metadata
@@ -55,10 +61,9 @@ void test_color(int num_arguments, char** argument_array) {
   // --
   // Log
 
-  // std::cout << "Colors (output) = ";
-  // thrust::copy(colors.begin(), colors.end(),
-  //              std::ostream_iterator<weight_t>(std::cout, "\n"));
-  // std::cout << std::endl;
+  std::cout << "Colors (output) = ";
+  thrust::copy(colors.begin(), colors.begin() + 100, std::ostream_iterator<weight_t>(std::cout, " "));
+  std::cout << std::endl;
   std::cerr << "color Elapsed Time: " << elapsed << " (ms)" << std::endl;
 }
 
