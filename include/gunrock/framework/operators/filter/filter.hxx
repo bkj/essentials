@@ -26,20 +26,20 @@ void execute(graph_t& G,
   if((context.size() == 1) || (input->size() <= 128)) {
     auto context0 = context.get_context(0);
     
-    if (type == filter_algorithm_t::compact)
-      compact::execute_gpu(G, op, input, output, *context0); // multigpu not implemented yet
-    else if (type == filter_algorithm_t::predicated)
+    // if (type == filter_algorithm_t::compact)
+    //   compact::execute_gpu(G, op, input, output, *context0); // multigpu not implemented yet
+    if (type == filter_algorithm_t::predicated)
       predicated::execute_gpu(G, op, input, output, *context0);
-    else if (type == filter_algorithm_t::bypass)
-      bypass::execute_gpu(G, op, input, output, *context0);
+    // else if (type == filter_algorithm_t::bypass)
+    //   bypass::execute_gpu(G, op, input, output, *context0);
     else
       error::throw_if_exception(cudaErrorUnknown, "Filter type not supported.");    
   
   } else {
     if (type == filter_algorithm_t::predicated)
       predicated::execute_mgpu(G, op, input, output, context);
-    else if (type == filter_algorithm_t::bypass)
-      bypass::execute_mgpu(G, op, input, output, context);
+    // else if (type == filter_algorithm_t::bypass)
+    //   bypass::execute_mgpu(G, op, input, output, context);
     else
       error::throw_if_exception(cudaErrorUnknown, "Filter type not supported.");
   }
@@ -53,14 +53,19 @@ void execute(graph_t& G,
              enactor_type* E,
              operator_t op,
              cuda::multi_context_t& context) {
+  
+  bool do_swap = (context.size() == 1) || (E->get_input_frontier()->size() <= 128);
+  
   execute<type>(G,                         // graph
                 op,                        // operator_t
                 E->get_input_frontier(),   // input frontier
                 E->get_output_frontier(),  // output frontier
                 context                    // context
   );
-
-  E->swap_frontier_buffers();
+  
+  if(do_swap) {
+    E->swap_frontier_buffers();
+  }
 }
 
 }  // namespace filter

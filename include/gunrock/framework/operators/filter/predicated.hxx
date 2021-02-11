@@ -23,7 +23,7 @@ void execute_gpu(graph_t& G,
   }
 
   auto predicate = [=] __host__ __device__(type_t const& i) -> bool {
-    return gunrock::util::limits::is_valid(i) ? op(i) : false;
+    return gunrock::util::limits::is_valid(i) ? op(i, 0) : false;
   };
   
   // Copy w/ predicate!
@@ -66,9 +66,7 @@ void execute_mgpu(graph_t& G,
   }
 
   // Define op
-  auto predicate = [=] __host__ __device__(type_t const& i) -> bool {
-    return gunrock::util::limits::is_valid(i) ? op(i) : false;
-  };
+
   
   // Setup
   int num_gpus    = context.size();
@@ -81,6 +79,7 @@ void execute_mgpu(graph_t& G,
   for(int i = 0; i < num_gpus; i++) {
     auto ctx = context.get_context(i);
     cudaSetDevice(ctx->ordinal());
+    int ordinal = ctx->ordinal();
     // std::cout << "device: " << ctx->ordinal() << std::endl;
     
     auto input_begin  = input->begin() + chunk_size * i;
@@ -88,6 +87,10 @@ void execute_mgpu(graph_t& G,
     auto input_end    = input->begin() + chunk_size * (i + 1);
     if(i == num_gpus - 1) input_end = input->end();
 
+    auto predicate = [=] __host__ __device__(type_t const& i) -> bool {
+      return gunrock::util::limits::is_valid(i) ? op(i, ordinal) : false;
+    };
+    
     auto new_output_end = thrust::copy_if(
       thrust::cuda::par.on(ctx->stream()),
       input_begin,
@@ -114,7 +117,7 @@ void execute_mgpu(graph_t& G,
   for(int i = 0 ; i < num_gpus ; i++) total_length += new_sizes[i];
   
   // Reduce
-  #pragma omp parallel for num_threads(num_gpus)
+  // #pragma omp parallel for num_threads(num_gpus)
   for(int i = 0; i < num_gpus; i++) {
     auto ctx = context.get_context(i);
     cudaSetDevice(ctx->ordinal());
@@ -136,8 +139,8 @@ void execute_mgpu(graph_t& G,
 
   cudaSetDevice(context0->ordinal());
   
-  thrust::copy_n(thrust::device, input->begin(), total_length, output->begin());
-  output->resize(total_length);
+  // thrust::copy_n(thrust::device, input->begin(), total_length, output->begin());
+  input->resize(total_length);
 }
 
 }  // namespace predicated

@@ -53,6 +53,7 @@ struct problem_t : gunrock::problem_t<graph_t> {
   
   edge_t* all_offsets[4];
   vertex_t* all_indices[4];
+  vertex_t* all_randoms[4];
   
   edge_t* offsets;
   vertex_t* indices;
@@ -75,14 +76,28 @@ struct problem_t : gunrock::problem_t<graph_t> {
     offsets = g.offsets;
     indices = g.indices;
     
-    int num_gpu = 4;
+    int num_gpu = -1;
+    cudaGetDeviceCount(&num_gpu);
     for(int i = 0; i < num_gpu; i++) {
-      cudaMalloc((void **)&(all_offsets[i]), (n_vertices + 1) * sizeof(edge_t));
-      cudaMemcpy(all_offsets[i], g.offsets, (n_vertices + 1) * sizeof(edge_t), cudaMemcpyDeviceToDevice);
+      cudaSetDevice(i);
+      
+      edge_t* local_offsets;
+      cudaMalloc((void **)&local_offsets, (n_vertices + 1) * sizeof(edge_t));
+      cudaMemcpy(local_offsets, g.offsets, (n_vertices + 1) * sizeof(edge_t), cudaMemcpyDeviceToDevice);
+      all_offsets[i] = local_offsets;
+      
+      vertex_t* local_indices;
+      cudaMalloc((void **)&(local_indices), n_edges * sizeof(vertex_t));
+      cudaMemcpy(local_indices, g.indices, n_edges * sizeof(vertex_t), cudaMemcpyDeviceToDevice);
+      all_indices[i] = local_indices;
 
-      cudaMalloc((void **)&(all_indices[i]), n_edges * sizeof(vertex_t));
-      cudaMemcpy(all_indices[i], g.indices, n_edges * sizeof(vertex_t), cudaMemcpyDeviceToDevice);
+      vertex_t* local_randoms;
+      cudaMalloc((void **)&(local_randoms), n_vertices * sizeof(vertex_t));
+      cudaMemcpy(local_randoms, randoms.data().get(), n_vertices * sizeof(vertex_t), cudaMemcpyDeviceToDevice);
+      all_randoms[i] = local_randoms;
+      
     }
+    cudaSetDevice(0);
   }
 };
 
@@ -118,27 +133,48 @@ struct enactor_t : gunrock::enactor_t<problem_t> {
 
     auto all_offsets = P->all_offsets;
     auto all_indices = P->all_indices;
+    auto all_randoms = P->all_randoms;
 
     auto offsets0 = all_offsets[0];
-    auto indices0 = all_indices[0];
     auto offsets1 = all_offsets[1];
-    auto indices1 = all_indices[1];
     auto offsets2 = all_offsets[2];
-    auto indices2 = all_indices[2];
     auto offsets3 = all_offsets[3];
+    auto indices0 = all_indices[0];
+    auto indices1 = all_indices[1];
+    auto indices2 = all_indices[2];
     auto indices3 = all_indices[3];
+    auto randoms0 = all_randoms[0];
+    auto randoms1 = all_randoms[1];
+    auto randoms2 = all_randoms[2];
+    auto randoms3 = all_randoms[3];
 
     auto color_me_in = [
       offsets0, indices0, offsets1, indices1, offsets2, indices2, offsets3, indices3,
-      colors, randoms, iteration] __host__ __device__(
-                           vertex_t const& vertex) -> bool {
+      randoms0, randoms1, randoms2, randoms3, 
+      colors, iteration] __host__ __device__(
+                           vertex_t const& vertex, int const& device) -> bool {
       
-      // int device = 0;
-      // cudaGetDevice(&device);
-      // printf("device=%d | vertex=%d\n", device, vertex);
+      edge_t* offsets;
+      vertex_t* indices;
+      vertex_t* randoms;
       
-      auto offsets = offsets0;
-      auto indices = indices0;
+      if(device == 0) {
+        offsets = offsets0;
+        indices = indices0;
+        randoms = randoms0;
+      } else if(device == 1) {
+        offsets = offsets1;
+        indices = indices1;
+        randoms = randoms1;
+      } else if(device == 2) {
+        offsets = offsets2;
+        indices = indices2;
+        randoms = randoms2;
+      } else if(device == 3) {
+        offsets = offsets3;
+        indices = indices3;
+        randoms = randoms3;
+      }
       
       // <<
       // edge_t start_edge = G.get_starting_edge(vertex);
